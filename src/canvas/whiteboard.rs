@@ -48,15 +48,13 @@ pub fn Whiteboard(signals: ChalkSignals) -> impl IntoView {
         move |_| {
             let zoom_percent = signals.zoom.get();
             let target_zoom = (zoom_percent as f64 / 100.0).clamp(MIN_ZOOM, MAX_ZOOM);
-
             let Some(canvas) = canvas_ref.get() else {
                 return;
             };
             let center_x = canvas.width() as f64 / 2.0;
             let center_y = canvas.height() as f64 / 2.0;
-
             state.update(|s| {
-                s.set_zoom_centered(target_zoom, center_x, center_y, MIN_ZOOM, MAX_ZOOM);
+                s.set_zoom_centered(target_zoom, center_x, center_y, MIN_ZOOM, MAX_ZOOM)
             });
             repaint();
         }
@@ -67,6 +65,15 @@ pub fn Whiteboard(signals: ChalkSignals) -> impl IntoView {
         move |_| {
             let _ = signals.dark_mode.get();
             state.update(|s| s.change_theme(signals.dark_mode.get()));
+            repaint();
+        }
+    });
+
+    Effect::new({
+        let repaint = repaint.clone();
+        move |_| {
+            let tool = signals.tool.get();
+            state.update(|s| s.set_tool(tool));
             repaint();
         }
     });
@@ -117,10 +124,15 @@ pub fn Whiteboard(signals: ChalkSignals) -> impl IntoView {
         WhiteboardController::on_wheel(e, canvas_ref, state, signals);
     });
 
+    let cursor = move || signals.tool.get().cursor();
+
     view! {
         <canvas
             node_ref=canvas_ref
-            style="display:block;position:fixed;inset:0;touch-action:none;cursor:crosshair;"
+            style=move || format!(
+                "display:block;position:fixed;inset:0;touch-action:none;cursor:{};",
+                cursor()
+            )
             on:pointerdown=move |e| on_pointer_down.run(e)
             on:pointermove=move |e| on_pointer_move.run(e)
             on:pointerup=move |e| on_pointer_up.run(e)

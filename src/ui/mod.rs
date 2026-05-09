@@ -1,3 +1,5 @@
-pub mod components;
+pub mod keybindings;
 pub mod layout;
 pub mod overlay;
+
+pub mod components;

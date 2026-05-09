@@ -1,25 +1,34 @@
 use leptos::prelude::*;
 
+use crate::canvas::tool::Tool;
+
 #[derive(Clone, Debug, Copy)]
 pub struct ChalkSignals {
     pub zoom: SignalPair<u32>,
-    pub clear: SignalPair<u32>,
 
+    pub clear: SignalPair<u32>,
     pub undo: SignalPair<u32>,
     pub redo: SignalPair<u32>,
 
     pub dark_mode: SignalPair<bool>,
+
+    pub tool: SignalPair<Tool>,
+    pub palette_open: RwSignal<bool>,
 }
 
 impl ChalkSignals {
     pub fn new() -> Self {
         Self {
             zoom: SignalPair::new(100_u32),
+
             clear: SignalPair::new(0_u32),
             undo: SignalPair::new(0_u32),
             redo: SignalPair::new(0_u32),
 
             dark_mode: SignalPair::new(true),
+
+            tool: SignalPair::new(Tool::default()),
+            palette_open: RwSignal::new(false),
         }
     }
 }

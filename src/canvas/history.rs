@@ -1,19 +1,19 @@
-use crate::canvas::types::Stroke;
+use crate::canvas::primitives::Primitive;
 
 #[derive(Clone, Debug, Default)]
 pub struct History {
-    /// All committed strokes
-    strokes: Vec<Stroke>,
+    /// All committed primitives
+    primitives: Vec<Primitive>,
     /// How many strokes are currently "active" (the rest are undone)
     cursor: usize,
 }
 
 impl History {
-    pub fn push(&mut self, stroke: Stroke) {
-        // Pushing a new stroke discards any redoable future
-        self.strokes.truncate(self.cursor);
-        self.strokes.push(stroke);
-        self.cursor = self.strokes.len();
+    pub fn push(&mut self, primitive: Primitive) {
+        // Pushing a new shape discards any redoable future
+        self.primitives.truncate(self.cursor);
+        self.primitives.push(primitive);
+        self.cursor = self.primitives.len();
     }
 
     pub fn undo(&mut self) {
@@ -23,19 +23,18 @@ impl History {
     }
 
     pub fn redo(&mut self) {
-        if self.cursor < self.strokes.len() {
+        if self.cursor < self.primitives.len() {
             self.cursor += 1;
         }
     }
 
     pub fn clear(&mut self) {
-        self.strokes.clear();
+        self.primitives.clear();
         self.cursor = 0;
     }
 
-    /// The slice of strokes that should currently be drawn
-    pub fn visible(&self) -> &[Stroke] {
-        &self.strokes[..self.cursor]
+    pub fn visible(&self) -> &[Primitive] {
+        &self.primitives[..self.cursor]
     }
 
     pub fn can_undo(&self) -> bool {
@@ -43,6 +42,6 @@ impl History {
     }
 
     pub fn can_redo(&self) -> bool {
-        self.cursor < self.strokes.len()
+        self.cursor < self.primitives.len()
     }
 }

@@ -1,7 +1,7 @@
 use wasm_bindgen::JsCast;
 use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement};
 
-use crate::canvas::{state::WhiteboardState, types::Stroke};
+use crate::canvas::{primitives::renderer::PrimitiveRenderer, state::WhiteboardState};
 
 pub struct WhiteboardRenderer;
 
@@ -25,35 +25,19 @@ impl WhiteboardRenderer {
         ctx.set_line_cap("round");
         ctx.set_line_join("round");
 
-        for stroke in state.history.visible() {
-            Self::draw_stroke(&ctx, stroke, state.stroke_width, state.vt.zoom);
+        for primitive in state.history.visible() {
+            PrimitiveRenderer::draw(&ctx, primitive, state.stroke_width, state.vt.zoom);
         }
 
-        if let Some(stroke) = &state.active_stroke {
-            Self::draw_stroke(&ctx, stroke, state.stroke_width, state.vt.zoom);
+        if let Some(active) = &state.active {
+            if let Some(prev) = &active.preview() {
+                for p in prev {
+                    PrimitiveRenderer::draw(&ctx, p, state.stroke_width, state.vt.zoom);
+                }
+            }
         }
 
         ctx.restore();
-    }
-
-    fn draw_stroke(ctx: &CanvasRenderingContext2d, stroke: &Stroke, width: f64, zoom: f64) {
-        match stroke.as_slice() {
-            [] => {}
-            [(x, y)] => {
-                ctx.begin_path();
-                ctx.arc(*x, *y, width / zoom / 2.0, 0.0, std::f64::consts::TAU)
-                    .unwrap();
-                ctx.fill();
-            }
-            [(x0, y0), rest @ ..] => {
-                ctx.begin_path();
-                ctx.move_to(*x0, *y0);
-                for (x, y) in rest {
-                    ctx.line_to(*x, *y);
-                }
-                ctx.stroke();
-            }
-        }
     }
 }
 

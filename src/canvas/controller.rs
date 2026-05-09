@@ -46,11 +46,7 @@ impl WhiteboardController {
         };
         let _ = canvas.set_pointer_capture(e.pointer_id());
 
-        state.update(|s| {
-            let world =
-                s.vt.screen_to_world(e.client_x() as f64, e.client_y() as f64);
-            s.begin_stroke(world);
-        });
+        state.update(|s| s.begin_drawing((e.client_x() as f64, e.client_y() as f64)));
     }
 
     pub fn on_pointer_move(
@@ -63,11 +59,7 @@ impl WhiteboardController {
         }
         e.prevent_default();
 
-        state.update(|s| {
-            let world =
-                s.vt.screen_to_world(e.client_x() as f64, e.client_y() as f64);
-            s.extend_stroke(world);
-        });
+        state.update(|s| s.update_drawing((e.client_x() as f64, e.client_y() as f64)));
 
         let Some(canvas) = canvas_ref.get() else {
             return;
@@ -80,8 +72,8 @@ impl WhiteboardController {
         state: RwSignal<WhiteboardState>,
     ) {
         state.update(|s| {
-            if let Some(stroke) = s.end_stroke() {
-                s.history.push(stroke);
+            if let Some(primitive) = s.end_drawing() {
+                s.history.push(primitive);
             }
         });
 
