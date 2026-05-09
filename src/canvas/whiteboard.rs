@@ -4,6 +4,7 @@ use wasm_bindgen::prelude::*;
 use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement, PointerEvent, WheelEvent};
 
 use crate::canvas::types::{Stroke, ViewTransform};
+use crate::signals::ChalkSignals;
 
 pub const BG_COLOR: &str = "#F2F0EF";
 const STROKE_COLOR: &str = "#1a1a18";
@@ -68,23 +69,19 @@ fn redraw(canvas: &HtmlCanvasElement, strokes: &[Stroke], vt: ViewTransform) {
 
 /// Exposes the current zoom level so the overlay can display it.
 #[component]
-pub fn Whiteboard(
-    /// Write-only signal the canvas pushes zoom updates into.
-    set_zoom_pct: WriteSignal<u32>,
-
-    should_clear: ReadSignal<u32>,
-) -> impl IntoView {
+pub fn Whiteboard(signals: ChalkSignals) -> impl IntoView {
     let canvas_ref = NodeRef::<leptos::html::Canvas>::new();
 
     let strokes = RwSignal::<Vec<Stroke>>::new(vec![]);
     let is_drawing = RwSignal::new(false);
     let vt = RwSignal::new(ViewTransform::default());
 
+    // TODO: All of these signal listens are getting verbose, abstract out into functions?
     // Clear canvas trigger
     {
         let canvas_ref = canvas_ref.clone();
         Effect::new(move |_| {
-            let _ = should_clear.get();
+            let _ = signals.clear.get();
             strokes.set(vec![]);
             let Some(canvas) = canvas_ref.get() else {
                 return;
@@ -92,6 +89,42 @@ pub fn Whiteboard(
             let Some(ctx) = get_ctx(&canvas) else { return };
             ctx.set_fill_style_str(BG_COLOR);
             ctx.fill_rect(0.0, 0.0, canvas.width() as f64, canvas.height() as f64);
+        });
+    }
+
+    // Listen for external zoom changes
+    {
+        let canvas_ref = canvas_ref.clone();
+
+        Effect::new(move |_| {
+            let zoom_percent = signals.zoom.get();
+
+            let Some(canvas) = canvas_ref.get() else {
+                return;
+            };
+
+            let target_zoom = (zoom_percent as f64 / 100.0).clamp(MIN_ZOOM, MAX_ZOOM);
+
+            let current = vt.get_untracked();
+
+            // Avoid useless redraws
+            if (current.zoom - target_zoom).abs() < f64::EPSILON {
+                return;
+            }
+
+            let factor = target_zoom / current.zoom;
+
+            // Center of screen
+            let center_x = canvas.width() as f64 / 2.0;
+            let center_y = canvas.height() as f64 / 2.0;
+
+            let new_vt = current.zoom_towards(center_x, center_y, factor, MIN_ZOOM, MAX_ZOOM);
+
+            vt.set(new_vt);
+
+            strokes.with_untracked(|s| {
+                redraw(&canvas, s, new_vt);
+            });
         });
     }
 
@@ -205,7 +238,7 @@ pub fn Whiteboard(
                 MAX_ZOOM,
             );
             vt.set(new_vt);
-            set_zoom_pct.set((new_vt.zoom * 100.0).round() as u32);
+            signals.zoom.set((new_vt.zoom * 100.0).round() as u32);
 
             let Some(canvas) = canvas_ref.get() else {
                 return;

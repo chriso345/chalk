@@ -1,16 +1,17 @@
 use leptos::prelude::*;
 
+use crate::signals::ChalkSignals;
 use crate::ui::components::button::Button;
 use crate::ui::components::hint::Hint;
 use crate::ui::components::image::Image;
 use crate::ui::components::zoom_display::ZoomDisplay;
-use crate::ui::layout::{BoxConfig, BoxKind, PanelConfig};
+use crate::ui::layout::{BoxConfig, BoxKind, Label, PanelConfig};
 
 /// Props passed into the overlay alongside the layout config.
 #[derive(Clone)]
 pub struct OverlayContext {
-    /// Current zoom level for badge display.
-    pub zoom_pct: ReadSignal<u32>,
+    /// Signals for changes.
+    pub signals: ChalkSignals,
     /// All button actions are forwarded here.
     pub on_action: Callback<&'static str>,
 }
@@ -64,7 +65,7 @@ fn render_panel(panel: PanelConfig, ctx: StoredValue<OverlayContext>) -> impl In
 }
 
 fn render_box(config: BoxConfig, ctx: StoredValue<OverlayContext>) -> impl IntoView {
-    let label = config.label.unwrap_or("");
+    let label = config.label.unwrap_or(Label::Static(""));
     let kind = config.kind;
 
     match kind {
@@ -80,14 +81,22 @@ fn render_box(config: BoxConfig, ctx: StoredValue<OverlayContext>) -> impl IntoV
                     .map(|c| render_box(c, ctx))
                     .collect();
                 view! {
-                    <Button label="" on_click=on_click>
+                    <Button on_click=on_click>
                         {icons}
                     </Button>
                 }
                 .into_any()
             } else {
+                let label_signal: Signal<String> = match label {
+                    Label::Static(s) => Signal::from(s.to_string()),
+                    Label::Dynamic(f) => {
+                        let ctx_val = ctx.get_value();
+                        Signal::derive(move || f(&ctx_val))
+                    }
+                };
+
                 view! {
-                    <Button label=label on_click=on_click />
+                    <Button label=label_signal on_click=on_click />
                 }
                 .into_any()
             }
@@ -96,11 +105,21 @@ fn render_box(config: BoxConfig, ctx: StoredValue<OverlayContext>) -> impl IntoV
         BoxKind::Image { src } => view! { <Image src=src /> }.into_any(),
 
         BoxKind::Badge => {
-            let zoom_pct = ctx.with_value(|c| c.zoom_pct);
+            let zoom_pct = ctx.with_value(|c| c.signals.zoom.read_only());
             view! { <ZoomDisplay zoom_pct=zoom_pct /> }.into_any()
         }
 
-        BoxKind::Label => view! { <Hint text=label /> }.into_any(),
+        BoxKind::Label => {
+            let txt = match label {
+                Label::Static(s) => s,
+                Label::Dynamic(_) => "", // TODO: Add support for dynamic labels if needed
+            };
+
+            view! {
+                <Hint text=txt />
+            }
+            .into_any()
+        }
 
         BoxKind::Divider => view! {
             <div style="width:1px;height:16px;background:rgba(26,26,24,0.12);margin:0 2px;" />

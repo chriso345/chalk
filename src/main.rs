@@ -1,10 +1,13 @@
 #![allow(dead_code)]
 
-mod app;
 mod canvas;
 mod ui;
 
+mod app;
+mod signals;
+
 use app::App;
+
 use leptos::prelude::*;
 
 fn main() {

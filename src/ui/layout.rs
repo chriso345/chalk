@@ -1,3 +1,8 @@
+use core::fmt;
+use std::sync::Arc;
+
+use crate::ui::overlay::OverlayContext;
+
 /// Which screen edge (or corner) a panel is pinned to.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Anchor {
@@ -19,13 +24,29 @@ pub enum Direction {
     Column,
 }
 
+/// Label types can be either text or listeners for signals (e.g. zoom level).
+#[derive(Clone)]
+pub enum Label {
+    Static(&'static str),
+    Dynamic(Arc<dyn Fn(&OverlayContext) -> String + Send + Sync>),
+}
+
+impl fmt::Debug for Label {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Label::Static(s) => f.debug_tuple("Static").field(s).finish(),
+            Label::Dynamic(_) => f.write_str("Signal(<fn>)"),
+        }
+    }
+}
+
 /// A single UI element inside a panel.
 #[derive(Clone, Debug)]
 pub struct BoxConfig {
     /// Unique key - used as the HTML element key and for event dispatch.
     pub id: &'static str,
     /// Optional display label (used by Button, Badge, etc.).
-    pub label: Option<&'static str>,
+    pub label: Option<Label>,
     /// The kind of box to render.
     pub kind: BoxKind,
     /// Children are only used for groups - they are ignored for buttons, badges, etc.
@@ -106,7 +127,7 @@ impl PanelConfig {
 }
 
 impl BoxConfig {
-    pub fn button(id: &'static str, label: &'static str, action: &'static str) -> Self {
+    pub fn button(id: &'static str, label: Label, action: &'static str) -> Self {
         Self {
             id,
             label: Some(label),
@@ -129,7 +150,7 @@ impl BoxConfig {
         }
     }
 
-    pub fn badge(id: &'static str, label: &'static str) -> Self {
+    pub fn badge(id: &'static str, label: Label) -> Self {
         Self {
             id,
             label: Some(label),
@@ -138,7 +159,7 @@ impl BoxConfig {
         }
     }
 
-    pub fn label(id: &'static str, text: &'static str) -> Self {
+    pub fn label(id: &'static str, text: Label) -> Self {
         Self {
             id,
             label: Some(text),

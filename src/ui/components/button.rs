@@ -10,7 +10,7 @@ pub enum ButtonVariant {
 
 #[component]
 pub fn Button(
-    #[prop(default = "")] label: &'static str,
+    #[prop(default = Signal::from("".to_string()))] label: Signal<String>,
     #[prop(default = ButtonVariant::Ghost)] variant: ButtonVariant,
     #[prop(default = false)] active: bool,
     on_click: Callback<()>,
@@ -57,7 +57,7 @@ pub fn Button(
             // Render icon children if present, otherwise the text label
             {match children {
                 Some(c) => view! { <>{c()}</> }.into_any(),
-                None    => view! { <>{label}</> }.into_any(),
+                None => view! { <>{move || label.get()}</> }.into_any(),
             }}
         </button>
     }
