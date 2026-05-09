@@ -68,10 +68,10 @@ pub fn App() -> impl IntoView {
         match action {
             "tool:draw" => {}
             "action:undo" => {
-                leptos::logging::log!("undo!");
+                signals.undo.update(|n| *n += 1);
             }
             "action:redo" => {
-                leptos::logging::log!("redo!");
+                signals.redo.update(|n| *n += 1);
             }
             "action:clear" => {
                 signals.clear.update(|n| *n += 1);

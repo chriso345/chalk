@@ -3,6 +3,7 @@ use wasm_bindgen::JsCast;
 use wasm_bindgen::prelude::*;
 use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement, PointerEvent, WheelEvent};
 
+use crate::canvas::history::History;
 use crate::canvas::types::{Stroke, ViewTransform};
 use crate::signals::ChalkSignals;
 
@@ -72,7 +73,10 @@ fn redraw(canvas: &HtmlCanvasElement, strokes: &[Stroke], vt: ViewTransform) {
 pub fn Whiteboard(signals: ChalkSignals) -> impl IntoView {
     let canvas_ref = NodeRef::<leptos::html::Canvas>::new();
 
-    let strokes = RwSignal::<Vec<Stroke>>::new(vec![]);
+    let history = RwSignal::<History>::new(History::default());
+    // Tracks the stroke currently being drawn (not yet committed)
+    let active_stroke = RwSignal::<Option<Stroke>>::new(None);
+
     let is_drawing = RwSignal::new(false);
     let vt = RwSignal::new(ViewTransform::default());
 
@@ -82,7 +86,8 @@ pub fn Whiteboard(signals: ChalkSignals) -> impl IntoView {
         let canvas_ref = canvas_ref.clone();
         Effect::new(move |_| {
             let _ = signals.clear.get();
-            strokes.set(vec![]);
+            history.update(|h| h.clear());
+            active_stroke.set(None);
             let Some(canvas) = canvas_ref.get() else {
                 return;
             };
@@ -91,6 +96,26 @@ pub fn Whiteboard(signals: ChalkSignals) -> impl IntoView {
             ctx.fill_rect(0.0, 0.0, canvas.width() as f64, canvas.height() as f64);
         });
     }
+
+    // Undo trigger
+    Effect::new(move |_| {
+        let _ = signals.undo.get();
+        history.update(|h| h.undo());
+        let Some(canvas) = canvas_ref.get() else {
+            return;
+        };
+        history.with_untracked(|h| redraw(&canvas, h.visible(), vt.get_untracked()));
+    });
+
+    // Redo trigger
+    Effect::new(move |_| {
+        let _ = signals.redo.get();
+        history.update(|h| h.redo());
+        let Some(canvas) = canvas_ref.get() else {
+            return;
+        };
+        history.with_untracked(|h| redraw(&canvas, h.visible(), vt.get_untracked()));
+    });
 
     // Listen for external zoom changes
     {
@@ -122,8 +147,15 @@ pub fn Whiteboard(signals: ChalkSignals) -> impl IntoView {
 
             vt.set(new_vt);
 
-            strokes.with_untracked(|s| {
-                redraw(&canvas, s, new_vt);
+            history.with_untracked(|h| {
+                let visible = h.visible();
+                if let Some(stroke) = active_stroke.get_untracked() {
+                    let mut all: Vec<_> = visible.to_vec();
+                    all.push(stroke);
+                    redraw(&canvas, &all, new_vt);
+                } else {
+                    redraw(&canvas, visible, new_vt);
+                }
             });
         });
     }
@@ -153,7 +185,17 @@ pub fn Whiteboard(signals: ChalkSignals) -> impl IntoView {
                 let nh = win.inner_height().unwrap().as_f64().unwrap() as u32;
                 canvas_c.set_width(nw);
                 canvas_c.set_height(nh);
-                strokes.with_untracked(|s| redraw(&canvas_c, s, vt.get_untracked()));
+
+                history.with_untracked(|h| {
+                    let visible = h.visible();
+                    if let Some(stroke) = active_stroke.get_untracked() {
+                        let mut all: Vec<_> = visible.to_vec();
+                        all.push(stroke);
+                        redraw(&canvas, &all, vt.get_untracked());
+                    } else {
+                        redraw(&canvas, visible, vt.get_untracked());
+                    }
+                });
             });
             win.add_event_listener_with_callback("resize", closure.as_ref().unchecked_ref())
                 .unwrap();
@@ -171,7 +213,7 @@ pub fn Whiteboard(signals: ChalkSignals) -> impl IntoView {
             let _ = canvas.set_pointer_capture(e.pointer_id());
             let transform = vt.get_untracked();
             let (wx, wy) = transform.screen_to_world(e.client_x() as f64, e.client_y() as f64);
-            strokes.update(|s| s.push(vec![(wx, wy)]));
+            active_stroke.set(Some(vec![(wx, wy)]));
             is_drawing.set(true);
         })
     };
@@ -185,19 +227,19 @@ pub fn Whiteboard(signals: ChalkSignals) -> impl IntoView {
             e.prevent_default();
             let transform = vt.get_untracked();
             let (wx, wy) = transform.screen_to_world(e.client_x() as f64, e.client_y() as f64);
-            strokes.update(|s| {
-                if let Some(last) = s.last_mut() {
-                    last.push((wx, wy));
+            active_stroke.update(|s| {
+                if let Some(stroke) = s {
+                    stroke.push((wx, wy));
                 }
             });
 
-            // Incremental draw - only the last segment
+            // Incremental draw — same as before but reads from active_stroke
             let Some(canvas) = canvas_ref.get() else {
                 return;
             };
             let Some(ctx) = get_ctx(&canvas) else { return };
-            strokes.with_untracked(|s| {
-                let Some(stroke) = s.last() else { return };
+            active_stroke.with_untracked(|s| {
+                let Some(stroke) = s else { return };
                 let n = stroke.len();
                 if n < 2 {
                     return;
@@ -221,9 +263,24 @@ pub fn Whiteboard(signals: ChalkSignals) -> impl IntoView {
         })
     };
 
-    let on_pointer_up = Callback::new(move |_: PointerEvent| {
-        is_drawing.set(false);
-    });
+    let on_pointer_up = {
+        let canvas_ref = canvas_ref.clone();
+        Callback::new(move |_: PointerEvent| {
+            is_drawing.set(false);
+            // Commit the finished stroke into history
+            if let Some(stroke) = active_stroke.get_untracked() {
+                if !stroke.is_empty() {
+                    history.update(|h| h.push(stroke));
+                }
+            }
+            active_stroke.set(None);
+            // Full redraw so the committed stroke renders cleanly
+            let Some(canvas) = canvas_ref.get() else {
+                return;
+            };
+            history.with_untracked(|h| redraw(&canvas, h.visible(), vt.get_untracked()));
+        })
+    };
 
     let on_wheel = {
         let canvas_ref = canvas_ref.clone();
@@ -243,7 +300,17 @@ pub fn Whiteboard(signals: ChalkSignals) -> impl IntoView {
             let Some(canvas) = canvas_ref.get() else {
                 return;
             };
-            strokes.with_untracked(|s| redraw(&canvas, s, new_vt));
+
+            history.with_untracked(|h| {
+                let visible = h.visible();
+                if let Some(stroke) = active_stroke.get_untracked() {
+                    let mut all: Vec<_> = visible.to_vec();
+                    all.push(stroke);
+                    redraw(&canvas, &all, new_vt);
+                } else {
+                    redraw(&canvas, visible, new_vt);
+                }
+            });
         })
     };
 

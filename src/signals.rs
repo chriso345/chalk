@@ -4,6 +4,9 @@ use leptos::prelude::*;
 pub struct ChalkSignals {
     pub zoom: SignalPair<u32>,
     pub clear: SignalPair<u32>,
+
+    pub undo: SignalPair<u32>,
+    pub redo: SignalPair<u32>,
 }
 
 impl ChalkSignals {
@@ -11,6 +14,8 @@ impl ChalkSignals {
         Self {
             zoom: SignalPair::new(100_u32),
             clear: SignalPair::new(0_u32),
+            undo: SignalPair::new(0_u32),
+            redo: SignalPair::new(0_u32),
         }
     }
 }
