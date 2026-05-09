@@ -5,6 +5,7 @@ mod ui;
 
 mod app;
 mod signals;
+mod utils;
 
 use app::App;
 

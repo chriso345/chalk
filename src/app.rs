@@ -8,6 +8,7 @@ use crate::ui::components::palette::Palette;
 use crate::ui::keybindings;
 use crate::ui::layout::{Anchor, BoxConfig, Direction, Label, PanelConfig};
 use crate::ui::overlay::{Overlay, OverlayContext};
+use crate::utils::on_mount;
 
 fn build_layout() -> Vec<PanelConfig> {
     vec![
@@ -111,6 +112,8 @@ fn build_layout() -> Vec<PanelConfig> {
 
 #[component]
 pub fn App() -> impl IntoView {
+    on_mount();
+
     let signals = ChalkSignals::new();
 
     let on_action = Callback::new(move |action: &'static str| {
