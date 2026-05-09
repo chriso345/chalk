@@ -168,9 +168,9 @@ impl BoxConfig {
         }
     }
 
-    pub fn divider(id: &'static str) -> Self {
+    pub fn divider() -> Self {
         Self {
-            id,
+            id: "divider",
             label: None,
             kind: BoxKind::Divider,
             children: None,

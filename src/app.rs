@@ -9,17 +9,6 @@ use crate::ui::overlay::{Overlay, OverlayContext};
 
 fn build_layout() -> Vec<PanelConfig> {
     vec![
-        // Toolbar - top center
-        PanelConfig::new("toolbar", Anchor::TopCenter)
-            .offset(0, 16)
-            .direction(Direction::Row)
-            .gap(2)
-            .padding(6)
-            .add(BoxConfig::button(
-                "action-clear",
-                Label::Static("clear"),
-                "action:clear",
-            )),
         // Zoom badge - bottom right
         PanelConfig::new("zoom-badge", Anchor::BottomRight)
             .offset(-20, -20)
@@ -35,10 +24,6 @@ fn build_layout() -> Vec<PanelConfig> {
                 })),
                 "action:reset-zoom",
             )),
-        // BoxKind::Badge => {
-        //     let zoom_pct = ctx.with_value(|c| c.signals.zoom.read_only());
-        //     view! { <ZoomDisplay zoom_pct=zoom_pct /> }.into_any()
-        // }
         // Undo-redo menu - bottom left
         PanelConfig::new("undo-redo", Anchor::BottomLeft)
             .offset(20, -20)
@@ -50,10 +35,28 @@ fn build_layout() -> Vec<PanelConfig> {
                 "/public/icons/undo.svg",
                 "action:undo",
             ))
+            .add(BoxConfig::divider())
             .add(BoxConfig::icon_button(
                 "action-redo",
                 "/public/icons/redo.svg",
                 "action:redo",
+            ))
+            .add(BoxConfig::divider())
+            .add(BoxConfig::icon_button(
+                "action-clear",
+                "/public/icons/trash.svg",
+                "action:clear",
+            )),
+        // Dark mode toggle - top right
+        PanelConfig::new("dark-mode-toggle", Anchor::TopRight)
+            .offset(-20, 20)
+            .direction(Direction::Row)
+            .gap(0)
+            .padding(6)
+            .add(BoxConfig::icon_button(
+                "action-toggle-dark-mode",
+                "/public/icons/moon.svg",
+                "action:toggle-dark-mode",
             )),
     ]
 }
@@ -78,6 +81,9 @@ pub fn App() -> impl IntoView {
             }
             "action:reset-zoom" => {
                 signals.zoom.set(100);
+            }
+            "action:toggle-dark-mode" => {
+                signals.dark_mode.update(|b| *b = !*b);
             }
             _ => {}
         }

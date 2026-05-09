@@ -1,318 +1,121 @@
 use leptos::prelude::*;
 use wasm_bindgen::JsCast;
 use wasm_bindgen::prelude::*;
-use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement, PointerEvent, WheelEvent};
+use web_sys::{PointerEvent, WheelEvent};
 
-use crate::canvas::history::History;
-use crate::canvas::types::{Stroke, ViewTransform};
+use crate::canvas::{
+    controller::{MAX_ZOOM, MIN_ZOOM, WhiteboardController, make_repaint},
+    state::WhiteboardState,
+};
 use crate::signals::ChalkSignals;
 
-pub const BG_COLOR: &str = "#F2F0EF";
-const STROKE_COLOR: &str = "#1a1a18";
-const STROKE_WIDTH: f64 = 2.0;
-const MIN_ZOOM: f64 = 0.10;
-const MAX_ZOOM: f64 = 30.0;
-const ZOOM_SENSITIVITY: f64 = 0.001;
-
-fn get_ctx(canvas: &HtmlCanvasElement) -> Option<CanvasRenderingContext2d> {
-    let obj = canvas.get_context("2d").ok()??;
-    obj.dyn_into::<CanvasRenderingContext2d>().ok()
-}
-
-fn redraw(canvas: &HtmlCanvasElement, strokes: &[Stroke], vt: ViewTransform) {
-    let Some(ctx) = get_ctx(canvas) else { return };
-    let w = canvas.width() as f64;
-    let h = canvas.height() as f64;
-
-    ctx.set_fill_style_str(BG_COLOR);
-    ctx.fill_rect(0.0, 0.0, w, h);
-
-    ctx.save();
-    ctx.translate(vt.offset_x, vt.offset_y).unwrap();
-    ctx.scale(vt.zoom, vt.zoom).unwrap();
-
-    ctx.set_stroke_style_str(STROKE_COLOR);
-    ctx.set_line_width(STROKE_WIDTH / vt.zoom);
-    ctx.set_line_cap("round");
-    ctx.set_line_join("round");
-
-    for stroke in strokes {
-        match stroke.len() {
-            0 => {}
-            1 => {
-                let (x, y) = stroke[0];
-                ctx.begin_path();
-                ctx.arc(
-                    x,
-                    y,
-                    STROKE_WIDTH / vt.zoom / 2.0,
-                    0.0,
-                    std::f64::consts::TAU,
-                )
-                .unwrap();
-                ctx.set_fill_style_str(STROKE_COLOR);
-                ctx.fill();
-            }
-            _ => {
-                ctx.begin_path();
-                let (sx, sy) = stroke[0];
-                ctx.move_to(sx, sy);
-                for &(x, y) in &stroke[1..] {
-                    ctx.line_to(x, y);
-                }
-                ctx.stroke();
-            }
-        }
-    }
-
-    ctx.restore();
-}
-
-/// Exposes the current zoom level so the overlay can display it.
 #[component]
 pub fn Whiteboard(signals: ChalkSignals) -> impl IntoView {
     let canvas_ref = NodeRef::<leptos::html::Canvas>::new();
+    let state = RwSignal::new(WhiteboardState::new());
+    let repaint = make_repaint(canvas_ref, state);
 
-    let history = RwSignal::<History>::new(History::default());
-    // Tracks the stroke currently being drawn (not yet committed)
-    let active_stroke = RwSignal::<Option<Stroke>>::new(None);
-
-    let is_drawing = RwSignal::new(false);
-    let vt = RwSignal::new(ViewTransform::default());
-
-    // TODO: All of these signal listens are getting verbose, abstract out into functions?
-    // Clear canvas trigger
-    {
-        let canvas_ref = canvas_ref.clone();
-        Effect::new(move |_| {
+    Effect::new({
+        let repaint = repaint.clone();
+        move |_| {
             let _ = signals.clear.get();
-            history.update(|h| h.clear());
-            active_stroke.set(None);
-            let Some(canvas) = canvas_ref.get() else {
-                return;
-            };
-            let Some(ctx) = get_ctx(&canvas) else { return };
-            ctx.set_fill_style_str(BG_COLOR);
-            ctx.fill_rect(0.0, 0.0, canvas.width() as f64, canvas.height() as f64);
-        });
-    }
-
-    // Undo trigger
-    Effect::new(move |_| {
-        let _ = signals.undo.get();
-        history.update(|h| h.undo());
-        let Some(canvas) = canvas_ref.get() else {
-            return;
-        };
-        history.with_untracked(|h| redraw(&canvas, h.visible(), vt.get_untracked()));
+            state.update(|s| s.clear());
+            repaint();
+        }
     });
 
-    // Redo trigger
-    Effect::new(move |_| {
-        let _ = signals.redo.get();
-        history.update(|h| h.redo());
-        let Some(canvas) = canvas_ref.get() else {
-            return;
-        };
-        history.with_untracked(|h| redraw(&canvas, h.visible(), vt.get_untracked()));
+    Effect::new({
+        let repaint = repaint.clone();
+        move |_| {
+            let _ = signals.undo.get();
+            state.update(|s| s.undo());
+            repaint();
+        }
     });
 
-    // Listen for external zoom changes
-    {
+    Effect::new({
+        let repaint = repaint.clone();
+        move |_| {
+            let _ = signals.redo.get();
+            state.update(|s| s.redo());
+            repaint();
+        }
+    });
+
+    Effect::new({
+        let repaint = repaint.clone();
         let canvas_ref = canvas_ref.clone();
-
-        Effect::new(move |_| {
+        move |_| {
             let zoom_percent = signals.zoom.get();
-
-            let Some(canvas) = canvas_ref.get() else {
-                return;
-            };
-
             let target_zoom = (zoom_percent as f64 / 100.0).clamp(MIN_ZOOM, MAX_ZOOM);
 
-            let current = vt.get_untracked();
-
-            // Avoid useless redraws
-            if (current.zoom - target_zoom).abs() < f64::EPSILON {
+            let Some(canvas) = canvas_ref.get() else {
                 return;
-            }
-
-            let factor = target_zoom / current.zoom;
-
-            // Center of screen
+            };
             let center_x = canvas.width() as f64 / 2.0;
             let center_y = canvas.height() as f64 / 2.0;
 
-            let new_vt = current.zoom_towards(center_x, center_y, factor, MIN_ZOOM, MAX_ZOOM);
-
-            vt.set(new_vt);
-
-            history.with_untracked(|h| {
-                let visible = h.visible();
-                if let Some(stroke) = active_stroke.get_untracked() {
-                    let mut all: Vec<_> = visible.to_vec();
-                    all.push(stroke);
-                    redraw(&canvas, &all, new_vt);
-                } else {
-                    redraw(&canvas, visible, new_vt);
-                }
+            state.update(|s| {
+                s.set_zoom_centered(target_zoom, center_x, center_y, MIN_ZOOM, MAX_ZOOM);
             });
-        });
-    }
+            repaint();
+        }
+    });
 
-    // Resize canvas trigger
-    {
+    Effect::new({
+        let repaint = repaint.clone();
+        move |_| {
+            let _ = signals.dark_mode.get();
+            state.update(|s| s.change_theme(signals.dark_mode.get()));
+            repaint();
+        }
+    });
+
+    Effect::new({
+        let repaint = repaint.clone();
         let canvas_ref = canvas_ref.clone();
-        Effect::new(move |_| {
+        move |_| {
             let Some(canvas) = canvas_ref.get() else {
                 return;
             };
             let win = web_sys::window().unwrap();
-            let w = win.inner_width().unwrap().as_f64().unwrap() as u32;
-            let h = win.inner_height().unwrap().as_f64().unwrap() as u32;
-            canvas.set_width(w);
-            canvas.set_height(h);
 
-            if let Some(ctx) = get_ctx(&canvas) {
-                ctx.set_fill_style_str(BG_COLOR);
-                ctx.fill_rect(0.0, 0.0, w as f64, h as f64);
-            }
+            let set_size = |c: &web_sys::HtmlCanvasElement| {
+                let win = web_sys::window().unwrap();
+                c.set_width(win.inner_width().unwrap().as_f64().unwrap() as u32);
+                c.set_height(win.inner_height().unwrap().as_f64().unwrap() as u32);
+            };
 
+            set_size(&canvas);
+            repaint();
+
+            let repaint_resize = repaint.clone();
             let canvas_c = canvas.clone();
             let closure = Closure::<dyn Fn()>::new(move || {
-                let win = web_sys::window().unwrap();
-                let nw = win.inner_width().unwrap().as_f64().unwrap() as u32;
-                let nh = win.inner_height().unwrap().as_f64().unwrap() as u32;
-                canvas_c.set_width(nw);
-                canvas_c.set_height(nh);
-
-                history.with_untracked(|h| {
-                    let visible = h.visible();
-                    if let Some(stroke) = active_stroke.get_untracked() {
-                        let mut all: Vec<_> = visible.to_vec();
-                        all.push(stroke);
-                        redraw(&canvas, &all, vt.get_untracked());
-                    } else {
-                        redraw(&canvas, visible, vt.get_untracked());
-                    }
-                });
+                set_size(&canvas_c);
+                repaint_resize();
             });
             win.add_event_listener_with_callback("resize", closure.as_ref().unchecked_ref())
                 .unwrap();
             closure.forget();
-        });
-    }
+        }
+    });
 
-    let on_pointer_down = {
-        let canvas_ref = canvas_ref.clone();
-        Callback::new(move |e: PointerEvent| {
-            e.prevent_default();
-            let Some(canvas) = canvas_ref.get() else {
-                return;
-            };
-            let _ = canvas.set_pointer_capture(e.pointer_id());
-            let transform = vt.get_untracked();
-            let (wx, wy) = transform.screen_to_world(e.client_x() as f64, e.client_y() as f64);
-            active_stroke.set(Some(vec![(wx, wy)]));
-            is_drawing.set(true);
-        })
-    };
+    let on_pointer_down = Callback::new(move |e: PointerEvent| {
+        WhiteboardController::on_pointer_down(e, canvas_ref, state);
+    });
 
-    let on_pointer_move = {
-        let canvas_ref = canvas_ref.clone();
-        Callback::new(move |e: PointerEvent| {
-            if !is_drawing.get_untracked() {
-                return;
-            }
-            e.prevent_default();
-            let transform = vt.get_untracked();
-            let (wx, wy) = transform.screen_to_world(e.client_x() as f64, e.client_y() as f64);
-            active_stroke.update(|s| {
-                if let Some(stroke) = s {
-                    stroke.push((wx, wy));
-                }
-            });
+    let on_pointer_move = Callback::new(move |e: PointerEvent| {
+        WhiteboardController::on_pointer_move(e, canvas_ref, state);
+    });
 
-            // Incremental draw — same as before but reads from active_stroke
-            let Some(canvas) = canvas_ref.get() else {
-                return;
-            };
-            let Some(ctx) = get_ctx(&canvas) else { return };
-            active_stroke.with_untracked(|s| {
-                let Some(stroke) = s else { return };
-                let n = stroke.len();
-                if n < 2 {
-                    return;
-                }
-                let (x0, y0) = stroke[n - 2];
-                let (x1, y1) = stroke[n - 1];
-                ctx.save();
-                ctx.translate(transform.offset_x, transform.offset_y)
-                    .unwrap();
-                ctx.scale(transform.zoom, transform.zoom).unwrap();
-                ctx.set_stroke_style_str(STROKE_COLOR);
-                ctx.set_line_width(STROKE_WIDTH / transform.zoom);
-                ctx.set_line_cap("round");
-                ctx.set_line_join("round");
-                ctx.begin_path();
-                ctx.move_to(x0, y0);
-                ctx.line_to(x1, y1);
-                ctx.stroke();
-                ctx.restore();
-            });
-        })
-    };
+    let on_pointer_up = Callback::new(move |_: PointerEvent| {
+        WhiteboardController::on_pointer_up(canvas_ref, state);
+    });
 
-    let on_pointer_up = {
-        let canvas_ref = canvas_ref.clone();
-        Callback::new(move |_: PointerEvent| {
-            is_drawing.set(false);
-            // Commit the finished stroke into history
-            if let Some(stroke) = active_stroke.get_untracked() {
-                if !stroke.is_empty() {
-                    history.update(|h| h.push(stroke));
-                }
-            }
-            active_stroke.set(None);
-            // Full redraw so the committed stroke renders cleanly
-            let Some(canvas) = canvas_ref.get() else {
-                return;
-            };
-            history.with_untracked(|h| redraw(&canvas, h.visible(), vt.get_untracked()));
-        })
-    };
-
-    let on_wheel = {
-        let canvas_ref = canvas_ref.clone();
-        Callback::new(move |e: WheelEvent| {
-            e.prevent_default();
-            let factor = 1.0 - e.delta_y() * ZOOM_SENSITIVITY;
-            let new_vt = vt.get_untracked().zoom_towards(
-                e.client_x() as f64,
-                e.client_y() as f64,
-                factor,
-                MIN_ZOOM,
-                MAX_ZOOM,
-            );
-            vt.set(new_vt);
-            signals.zoom.set((new_vt.zoom * 100.0).round() as u32);
-
-            let Some(canvas) = canvas_ref.get() else {
-                return;
-            };
-
-            history.with_untracked(|h| {
-                let visible = h.visible();
-                if let Some(stroke) = active_stroke.get_untracked() {
-                    let mut all: Vec<_> = visible.to_vec();
-                    all.push(stroke);
-                    redraw(&canvas, &all, new_vt);
-                } else {
-                    redraw(&canvas, visible, new_vt);
-                }
-            });
-        })
-    };
+    let on_wheel = Callback::new(move |e: WheelEvent| {
+        WhiteboardController::on_wheel(e, canvas_ref, state, signals);
+    });
 
     view! {
         <canvas

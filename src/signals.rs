@@ -7,6 +7,8 @@ pub struct ChalkSignals {
 
     pub undo: SignalPair<u32>,
     pub redo: SignalPair<u32>,
+
+    pub dark_mode: SignalPair<bool>,
 }
 
 impl ChalkSignals {
@@ -16,6 +18,8 @@ impl ChalkSignals {
             clear: SignalPair::new(0_u32),
             undo: SignalPair::new(0_u32),
             redo: SignalPair::new(0_u32),
+
+            dark_mode: SignalPair::new(true),
         }
     }
 }
