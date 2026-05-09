@@ -1,9 +1,6 @@
 /// A single (x, y) point in world space.
 pub type Point = (f64, f64);
 
-/// An ordered list of points forming one pen stroke.
-pub type Stroke = Vec<Point>;
-
 /// The current viewport transform: where the world origin sits on screen
 /// and the zoom level.
 #[derive(Clone, Copy, Debug, PartialEq)]

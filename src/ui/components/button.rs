@@ -24,7 +24,7 @@ pub fn Button(
              padding:5px 10px;\
              border-radius:7px;\
              border:none;\
-             font-family:inherit;\
+             font-family:\"Inter\";\
              font-size:inherit;\
              letter-spacing:inherit;\
              background:transparent;\
