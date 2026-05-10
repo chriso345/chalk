@@ -1,15 +1,10 @@
 use crate::canvas::{
     history::History,
     primitives::{Primitive, ShapeInProgress},
+    styles::ChalkStyles,
     tool::Tool,
     types::{Point, ViewTransform},
 };
-
-const DARK_MODE_BG_COLOR: &str = "#1A1A18";
-const LIGHT_MODE_BG_COLOR: &str = "#F2F0EF";
-
-const STROKE_COLOR_LIGHT: &str = "#1A1A18";
-const STROKE_COLOR_DARK: &str = "#F2F0EF";
 
 /// What the user is currently drawing. Cleared on pointer-up.
 #[derive(Clone, Debug)]
@@ -52,10 +47,7 @@ pub struct WhiteboardState {
     /// The currently selected tool.
     pub tool: Tool,
 
-    /// Background colour - switches with dark mode.
-    pub bg_color: &'static str,
-    /// Line colour - currently only used for light mode
-    pub stroke_color: &'static str,
+    pub style: ChalkStyles<'static>,
 
     // TODO: This should be scaled with zoom to keep it visually consistent.
     /// Line width in world units (not pixels, so it scales with zoom).
@@ -81,8 +73,7 @@ impl WhiteboardState {
             vt: ViewTransform::default(),
             tool: Tool::default(),
 
-            bg_color: LIGHT_MODE_BG_COLOR,
-            stroke_color: STROKE_COLOR_LIGHT,
+            style: ChalkStyles::dark(),
             stroke_width: 2.0,
 
             last_pan_pos: None,
@@ -105,6 +96,7 @@ impl WhiteboardState {
                 self.last_pan_pos = Some(screen);
                 None
             }
+            Tool::Pointer => None,
             Tool::Pen => Some(ActiveDrawing::Stroke(vec![world])),
             Tool::Shape(kind) => Some(ActiveDrawing::Shape(ShapeInProgress::new(kind, world))),
         };
@@ -150,17 +142,12 @@ impl WhiteboardState {
         self.active = None;
     }
 
-    pub fn change_theme(&mut self, dark: bool) {
-        self.bg_color = if dark {
-            DARK_MODE_BG_COLOR
+    pub fn change_theme(&mut self, to_light: bool) {
+        self.style = if to_light {
+            ChalkStyles::light()
         } else {
-            LIGHT_MODE_BG_COLOR
-        };
-        self.stroke_color = if dark {
-            STROKE_COLOR_DARK
-        } else {
-            STROKE_COLOR_LIGHT
-        };
+            ChalkStyles::dark()
+        }
     }
 
     pub fn set_zoom_centered(

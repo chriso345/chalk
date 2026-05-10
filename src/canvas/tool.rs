@@ -5,6 +5,8 @@ use crate::canvas::primitives::ShapeKind;
 pub enum Tool {
     /// Pans the viewport; no marks are made.
     Pan,
+    /// Selecting pointer
+    Pointer,
     /// Freehand pen stroke.
     Pen,
     /// Geometric shape; the specific kind is carried as `ShapeKind`.
@@ -15,6 +17,7 @@ impl Tool {
     pub fn label(self) -> &'static str {
         match self {
             Tool::Pan => "pan",
+            Tool::Pointer => "pointer",
             Tool::Pen => "pen",
             Tool::Shape(ShapeKind::Line) => "line",
             Tool::Shape(ShapeKind::Arrow) => "arrow",
@@ -26,6 +29,7 @@ impl Tool {
     pub fn cursor(self) -> &'static str {
         match self {
             Tool::Pan => "grab",
+            Tool::Pointer => "default",
             _ => "crosshair",
         }
     }

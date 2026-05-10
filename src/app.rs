@@ -24,6 +24,11 @@ fn build_layout() -> Vec<PanelConfig> {
                 "tool:pan",
             ))
             .add(BoxConfig::icon_button(
+                "tool-pointer",
+                "/public/icons/pointer.svg",
+                "tool:pointer",
+            ))
+            .add(BoxConfig::icon_button(
                 "tool-pen",
                 "/public/icons/pencil.svg",
                 "tool:pen",
@@ -120,6 +125,7 @@ pub fn App() -> impl IntoView {
         // TODO: Change action to a proper action type (this can then be stored in history for undo/redo)
         match action {
             "tool:pan" => signals.tool.set(Tool::Pan),
+            "tool:pointer" => signals.tool.set(Tool::Pointer),
             "tool:pen" => signals.tool.set(Tool::Pen),
             "tool:line" => signals.tool.set(Tool::Shape(ShapeKind::Line)),
             "tool:arrow" => signals.tool.set(Tool::Shape(ShapeKind::Arrow)),

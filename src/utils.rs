@@ -1,4 +1,3 @@
-use leptos::prelude::*;
 use web_sys::window;
 
 pub fn on_mount() {
@@ -6,9 +5,7 @@ pub fn on_mount() {
 }
 
 fn init_favicon() {
-    let dark = RwSignal::new(prefers_dark_mode());
-
-    if dark.get() {
+    if prefers_dark_mode() {
         set_favicon("public/icons/chalkboard-dark.svg");
     } else {
         set_favicon("public/icons/chalkboard-light.svg");

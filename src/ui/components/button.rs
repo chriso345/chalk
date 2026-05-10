@@ -12,7 +12,7 @@ pub enum ButtonVariant {
 pub fn Button(
     #[prop(default = Signal::from("".to_string()))] label: Signal<String>,
     #[prop(default = ButtonVariant::Ghost)] variant: ButtonVariant,
-    #[prop(default = false)] active: bool,
+    #[prop(default = Signal::from(false))] active: Signal<bool>,
     on_click: Callback<()>,
     #[prop(optional)] children: Option<Children>,
 ) -> impl IntoView {
@@ -38,7 +38,7 @@ pub fn Button(
         }
         if matches!(variant, ButtonVariant::Solid) {
             s.push_str("background:rgba(26,26,24,0.88);color:#F2F0EF;");
-        } else if active {
+        } else if active.get() {
             s.push_str("background:rgba(26,26,24,0.10);color:#1a1a18;font-weight:600;");
         } else if hovered.get() {
             s.push_str("background:rgba(26,26,24,0.06);color:#1a1a18;");

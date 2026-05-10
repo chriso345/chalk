@@ -64,9 +64,33 @@ fn render_panel(panel: PanelConfig, ctx: StoredValue<OverlayContext>) -> impl In
     }
 }
 
+use crate::canvas::primitives::ShapeKind;
+use crate::canvas::tool::Tool;
+
 fn render_box(config: BoxConfig, ctx: StoredValue<OverlayContext>) -> impl IntoView {
     let label = config.label.unwrap_or(Label::Static(""));
     let kind = config.kind;
+
+    // Determine if this is a tool button and if it is selected
+    let is_tool_button = config.id.starts_with("tool-");
+    let tool_signal = ctx.with_value(|c| c.signals.tool.read_only());
+    let active = Signal::derive(move || {
+        if is_tool_button {
+            let tool = tool_signal.get();
+            match config.id {
+                "tool-pan" => tool == Tool::Pan,
+                "tool-pointer" => tool == Tool::Pointer,
+                "tool-pen" => tool == Tool::Pen,
+                "tool-line" => tool == Tool::Shape(ShapeKind::Line),
+                "tool-arrow" => tool == Tool::Shape(ShapeKind::Arrow),
+                "tool-rect" => tool == Tool::Shape(ShapeKind::Rect),
+                "tool-circle" => tool == Tool::Shape(ShapeKind::Circle),
+                _ => false,
+            }
+        } else {
+            false
+        }
+    });
 
     match kind {
         BoxKind::Button { action } => {
@@ -81,7 +105,7 @@ fn render_box(config: BoxConfig, ctx: StoredValue<OverlayContext>) -> impl IntoV
                     .map(|c| render_box(c, ctx))
                     .collect();
                 view! {
-                    <Button on_click=on_click>
+                    <Button on_click=on_click active=active>
                         {icons}
                     </Button>
                 }
@@ -96,7 +120,7 @@ fn render_box(config: BoxConfig, ctx: StoredValue<OverlayContext>) -> impl IntoV
                 };
 
                 view! {
-                    <Button label=label_signal on_click=on_click />
+                    <Button label=label_signal on_click=on_click active=active />
                 }
                 .into_any()
             }

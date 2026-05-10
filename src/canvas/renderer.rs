@@ -12,15 +12,15 @@ impl WhiteboardRenderer {
         let w = canvas.width() as f64;
         let h = canvas.height() as f64;
 
-        ctx.set_fill_style_str(state.bg_color);
+        ctx.set_fill_style_str(state.style.get_bg());
         ctx.fill_rect(0.0, 0.0, w, h);
 
         ctx.save();
         ctx.translate(state.vt.offset_x, state.vt.offset_y).unwrap();
         ctx.scale(state.vt.zoom, state.vt.zoom).unwrap();
 
-        ctx.set_stroke_style_str(state.stroke_color);
-        ctx.set_fill_style_str(state.stroke_color);
+        ctx.set_stroke_style_str(state.style.get_stroke());
+        ctx.set_fill_style_str(state.style.get_stroke());
         ctx.set_line_width(state.stroke_width / state.vt.zoom);
         ctx.set_line_cap("round");
         ctx.set_line_join("round");
