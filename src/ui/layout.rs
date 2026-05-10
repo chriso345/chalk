@@ -47,6 +47,8 @@ pub struct BoxConfig {
     pub id: &'static str,
     /// Optional display label (used by Button, Badge, etc.).
     pub label: Option<Label>,
+    /// Optional Shortcut hint
+    pub hint: Option<&'static str>,
     /// The kind of box to render.
     pub kind: BoxKind,
     /// Children are only used for groups - they are ignored for buttons, badges, etc.
@@ -58,8 +60,6 @@ pub struct BoxConfig {
 pub enum BoxKind {
     /// Clickable button. `on_click` is the action id forwarded to the app.
     Button { action: &'static str },
-    /// Read-only display badge.
-    Badge,
     /// Static text label.
     Label,
     /// Horizontal or vertical divider.
@@ -131,31 +131,30 @@ impl BoxConfig {
         Self {
             id,
             label: Some(label),
+            hint: None,
             kind: BoxKind::Button { action },
             children: None,
         }
     }
 
-    pub fn icon_button(id: &'static str, src: &'static str, action: &'static str) -> Self {
+    pub fn icon_button(
+        id: &'static str,
+        icon_id: &'static str,
+        src: &'static str,
+        action: &'static str,
+    ) -> Self {
         Self {
             id,
             label: None,
+            hint: None,
             kind: BoxKind::Button { action },
             children: Some(vec![BoxConfig {
-                id: "{src}-icon", // TODO: better id scheme for nested boxes
+                id: icon_id,
                 label: None,
+                hint: None,
                 kind: BoxKind::Image { src },
                 children: None,
             }]),
-        }
-    }
-
-    pub fn badge(id: &'static str, label: Label) -> Self {
-        Self {
-            id,
-            label: Some(label),
-            kind: BoxKind::Badge,
-            children: None,
         }
     }
 
@@ -163,6 +162,7 @@ impl BoxConfig {
         Self {
             id,
             label: Some(text),
+            hint: None,
             kind: BoxKind::Label,
             children: None,
         }
@@ -172,9 +172,15 @@ impl BoxConfig {
         Self {
             id: "divider",
             label: None,
+            hint: None,
             kind: BoxKind::Divider,
             children: None,
         }
+    }
+
+    pub fn with_hint(&mut self, hint: &'static str) -> Self {
+        self.hint = Some(hint);
+        self.clone()
     }
 }
 

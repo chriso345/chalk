@@ -4,7 +4,6 @@ use crate::signals::ChalkSignals;
 use crate::ui::components::button::Button;
 use crate::ui::components::hint::Hint;
 use crate::ui::components::image::Image;
-use crate::ui::components::zoom_display::ZoomDisplay;
 use crate::ui::layout::{BoxConfig, BoxKind, Label, PanelConfig};
 
 /// Props passed into the overlay alongside the layout config.
@@ -84,7 +83,7 @@ fn render_box(config: BoxConfig, ctx: StoredValue<OverlayContext>) -> impl IntoV
                 "tool-line" => tool == Tool::Shape(ShapeKind::Line),
                 "tool-arrow" => tool == Tool::Shape(ShapeKind::Arrow),
                 "tool-rect" => tool == Tool::Shape(ShapeKind::Rect),
-                "tool-circle" => tool == Tool::Shape(ShapeKind::Circle),
+                "tool-circle" => tool == Tool::Shape(ShapeKind::Oval),
                 _ => false,
             }
         } else {
@@ -100,12 +99,17 @@ fn render_box(config: BoxConfig, ctx: StoredValue<OverlayContext>) -> impl IntoV
 
             // icon_button: has image children instead of a text label
             if let Some(inner_children) = config.children {
+                let hint = match config.hint {
+                    Some(s) => s,
+                    None => "",
+                };
+
                 let icons: Vec<_> = inner_children
                     .into_iter()
                     .map(|c| render_box(c, ctx))
                     .collect();
                 view! {
-                    <Button on_click=on_click active=active>
+                    <Button on_click=on_click active=active hint=hint.to_string()>
                         {icons}
                     </Button>
                 }
@@ -127,11 +131,6 @@ fn render_box(config: BoxConfig, ctx: StoredValue<OverlayContext>) -> impl IntoV
         }
 
         BoxKind::Image { src } => view! { <Image src=src /> }.into_any(),
-
-        BoxKind::Badge => {
-            let zoom_pct = ctx.with_value(|c| c.signals.zoom.read_only());
-            view! { <ZoomDisplay zoom_pct=zoom_pct /> }.into_any()
-        }
 
         BoxKind::Label => {
             let txt = match label {

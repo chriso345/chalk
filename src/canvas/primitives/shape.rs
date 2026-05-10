@@ -6,7 +6,7 @@ pub enum ShapeKind {
     Line,
     Arrow,
     Rect,
-    Circle,
+    Oval,
 }
 
 /// A fully-specified geometric shape stored in history.
@@ -15,7 +15,8 @@ pub enum Shape {
     Line { start: Point, end: Point },
     Arrow { start: Point, end: Point },
     Rect { origin: Point, size: (f64, f64) },
-    Circle { center: Point, radius: f64 },
+    // Circle { center: Point, radius: f64 },
+    Oval { origin: Point, size: (f64, f64) },
 }
 
 /// Transient state for a shape being drawn. Stores anchor + live cursor so
@@ -36,8 +37,29 @@ impl ShapeInProgress {
         }
     }
 
-    pub fn update(&mut self, current: Point) {
-        self.current = current;
+    pub fn update(&mut self, current: Point, snap: bool) {
+        if !snap {
+            self.current = current;
+            return;
+        }
+
+        match self.kind {
+            ShapeKind::Rect | ShapeKind::Oval => {
+                let (ax, ay) = self.anchor;
+                let (cx, cy) = current;
+
+                let dx = cx - ax;
+                let dy = cy - ay;
+
+                let size = dx.abs().max(dy.abs());
+
+                self.current = (ax + size.copysign(dx), ay + size.copysign(dy));
+            }
+
+            _ => {
+                self.current = current;
+            }
+        }
     }
 
     pub fn build(&self) -> Shape {
@@ -56,14 +78,10 @@ impl ShapeInProgress {
                 origin: (ax.min(cx), ay.min(cy)),
                 size: ((cx - ax).abs(), (cy - ay).abs()),
             },
-            ShapeKind::Circle => {
-                let dx = cx - ax;
-                let dy = cy - ay;
-                Shape::Circle {
-                    center: self.anchor,
-                    radius: (dx * dx + dy * dy).sqrt(),
-                }
-            }
+            ShapeKind::Oval => Shape::Oval {
+                origin: (ax.min(cx), ay.min(cy)),
+                size: ((cx - ax).abs(), (cy - ay).abs()),
+            },
         }
     }
 }

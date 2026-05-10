@@ -1,6 +1,7 @@
 use leptos::prelude::*;
 use web_sys::{HtmlCanvasElement, PointerEvent, WheelEvent};
 
+use crate::canvas::tool::Tool;
 use crate::canvas::{renderer::WhiteboardRenderer, state::WhiteboardState};
 use crate::signals::ChalkSignals;
 
@@ -59,7 +60,9 @@ impl WhiteboardController {
         }
         e.prevent_default();
 
-        state.update(|s| s.update_drawing((e.client_x() as f64, e.client_y() as f64)));
+        state.update(|s| {
+            s.update_drawing((e.client_x() as f64, e.client_y() as f64), e.shift_key())
+        });
 
         let Some(canvas) = canvas_ref.get() else {
             return;
@@ -70,10 +73,12 @@ impl WhiteboardController {
     pub fn on_pointer_up(
         canvas_ref: NodeRef<leptos::html::Canvas>,
         state: RwSignal<WhiteboardState>,
+        signals: ChalkSignals,
     ) {
         state.update(|s| {
             if let Some(primitive) = s.end_drawing() {
                 s.history.push(primitive);
+                signals.tool.set(Tool::Pointer);
             }
         });
 

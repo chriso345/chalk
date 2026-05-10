@@ -102,7 +102,7 @@ impl WhiteboardState {
         };
     }
 
-    pub fn update_drawing(&mut self, screen: Point) {
+    pub fn update_drawing(&mut self, screen: Point, snap: bool) {
         match self.tool {
             Tool::Pan => {
                 if let Some((lx, ly)) = self.last_pan_pos {
@@ -115,7 +115,7 @@ impl WhiteboardState {
                 let world = self.vt.screen_to_world(screen.0, screen.1);
                 match &mut self.active {
                     Some(ActiveDrawing::Stroke(pts)) => pts.push(world),
-                    Some(ActiveDrawing::Shape(s)) => s.update(world),
+                    Some(ActiveDrawing::Shape(s)) => s.update(world, snap),
                     None => {}
                 }
             }

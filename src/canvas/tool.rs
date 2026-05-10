@@ -22,7 +22,7 @@ impl Tool {
             Tool::Shape(ShapeKind::Line) => "line",
             Tool::Shape(ShapeKind::Arrow) => "arrow",
             Tool::Shape(ShapeKind::Rect) => "rect",
-            Tool::Shape(ShapeKind::Circle) => "circle",
+            Tool::Shape(ShapeKind::Oval) => "circle",
         }
     }
 
@@ -37,6 +37,6 @@ impl Tool {
 
 impl Default for Tool {
     fn default() -> Self {
-        Tool::Pen
+        Tool::Pointer
     }
 }

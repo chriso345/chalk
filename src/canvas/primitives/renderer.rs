@@ -105,12 +105,25 @@ impl PrimitiveRenderer {
                 ctx.rect(*x, *y, *w, *h);
                 ctx.stroke();
             }
-            Shape::Circle {
-                center: (cx, cy),
-                radius,
+            Shape::Oval {
+                origin: (x, y),
+                size: (w, h),
             } => {
+                let rx = *w / 2.0;
+                let ry = *h / 2.0;
+
+                let cx = *x + rx;
+                let cy = *y + ry;
+
                 ctx.begin_path();
-                ctx.arc(*cx, *cy, *radius, 0.0, TAU).unwrap();
+
+                ctx.ellipse(
+                    cx, cy, rx, ry, 0.0, // rotation
+                    0.0, // start angle
+                    TAU, // end angle
+                )
+                .unwrap();
+
                 ctx.stroke();
             }
         }

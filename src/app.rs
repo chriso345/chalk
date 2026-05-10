@@ -18,42 +18,67 @@ fn build_layout() -> Vec<PanelConfig> {
             .direction(Direction::Row)
             .gap(2)
             .padding(6)
-            .add(BoxConfig::icon_button(
-                "tool-pan",
-                "/public/icons/pan.svg",
-                "tool:pan",
-            ))
+            .add(
+                BoxConfig::icon_button(
+                    "tool-pan",
+                    "tool-pan-icon",
+                    "/public/icons/pan.svg",
+                    "tool:pan",
+                )
+                .with_hint("v"),
+            )
             .add(BoxConfig::icon_button(
                 "tool-pointer",
+                "tool-pointer-icon",
                 "/public/icons/pointer.svg",
                 "tool:pointer",
             ))
-            .add(BoxConfig::icon_button(
-                "tool-pen",
-                "/public/icons/pencil.svg",
-                "tool:pen",
-            ))
+            .add(
+                BoxConfig::icon_button(
+                    "tool-pen",
+                    "tool-pen-icon",
+                    "/public/icons/pencil.svg",
+                    "tool:pen",
+                )
+                .with_hint("p"),
+            )
             .add(BoxConfig::divider())
-            .add(BoxConfig::icon_button(
-                "tool-line",
-                "/public/icons/line.svg",
-                "tool:line",
-            ))
-            .add(BoxConfig::icon_button(
-                "tool-arrow",
-                "/public/icons/arrow.svg",
-                "tool:arrow",
-            ))
-            .add(BoxConfig::icon_button(
-                "tool-rect",
-                "/public/icons/square.svg",
-                "tool:rect",
-            ))
-            .add(BoxConfig::icon_button(
-                "tool-circle",
-                "/public/icons/circle.svg",
-                "tool:circle",
-            )),
+            .add(
+                BoxConfig::icon_button(
+                    "tool-line",
+                    "tool-line-icon",
+                    "/public/icons/line.svg",
+                    "tool:line",
+                )
+                .with_hint("l"),
+            )
+            .add(
+                BoxConfig::icon_button(
+                    "tool-arrow",
+                    "tool-arrow-icon",
+                    "/public/icons/arrow.svg",
+                    "tool:arrow",
+                )
+                .with_hint("a"),
+            )
+            .add(
+                BoxConfig::icon_button(
+                    "tool-rect",
+                    "tool-rect-icon",
+                    "/public/icons/square.svg",
+                    "tool:rect",
+                )
+                .with_hint("r"),
+            )
+            .add(
+                BoxConfig::icon_button(
+                    "tool-circle",
+                    "tool-circle-icon",
+                    "/public/icons/circle.svg",
+                    "tool:circle",
+                )
+                .with_hint("c"),
+            ),
         // Zoom badge - bottom right
         PanelConfig::new("zoom-badge", Anchor::BottomRight)
             .offset(-20, -20)
@@ -62,6 +87,7 @@ fn build_layout() -> Vec<PanelConfig> {
             .padding(5)
             .add(BoxConfig::icon_button(
                 "zoom-out",
+                "zoom-out-icon",
                 "/public/icons/minus.svg",
                 "action:zoom-out",
             ))
@@ -75,6 +101,7 @@ fn build_layout() -> Vec<PanelConfig> {
             ))
             .add(BoxConfig::icon_button(
                 "zoom-in",
+                "zoom-in-icon",
                 "/public/icons/plus.svg",
                 "action:zoom-in",
             )),
@@ -86,18 +113,21 @@ fn build_layout() -> Vec<PanelConfig> {
             .padding(6)
             .add(BoxConfig::icon_button(
                 "action-undo",
+                "action-undo-icon",
                 "/public/icons/undo.svg",
                 "action:undo",
             ))
             .add(BoxConfig::divider())
             .add(BoxConfig::icon_button(
                 "action-redo",
+                "action-redo-icon",
                 "/public/icons/redo.svg",
                 "action:redo",
             ))
             .add(BoxConfig::divider())
             .add(BoxConfig::icon_button(
                 "action-clear",
+                "action-clear-icon",
                 "/public/icons/trash.svg",
                 "action:clear",
             )),
@@ -108,7 +138,8 @@ fn build_layout() -> Vec<PanelConfig> {
             .gap(0)
             .padding(6)
             .add(BoxConfig::icon_button(
-                "action-toggle-dark-mode",
+                "toggle-dark-mode",
+                "toggle-dark-mode-icon",
                 "/public/icons/moon.svg",
                 "action:toggle-dark-mode",
             )),
@@ -130,7 +161,7 @@ pub fn App() -> impl IntoView {
             "tool:line" => signals.tool.set(Tool::Shape(ShapeKind::Line)),
             "tool:arrow" => signals.tool.set(Tool::Shape(ShapeKind::Arrow)),
             "tool:rect" => signals.tool.set(Tool::Shape(ShapeKind::Rect)),
-            "tool:circle" => signals.tool.set(Tool::Shape(ShapeKind::Circle)),
+            "tool:circle" => signals.tool.set(Tool::Shape(ShapeKind::Oval)),
 
             "action:undo" => signals.undo.update(|n| *n += 1),
             "action:redo" => signals.redo.update(|n| *n += 1),

@@ -13,6 +13,7 @@ pub fn Button(
     #[prop(default = Signal::from("".to_string()))] label: Signal<String>,
     #[prop(default = ButtonVariant::Ghost)] variant: ButtonVariant,
     #[prop(default = Signal::from(false))] active: Signal<bool>,
+    #[prop(default = "".to_string())] hint: String,
     on_click: Callback<()>,
     #[prop(optional)] children: Option<Children>,
 ) -> impl IntoView {
@@ -21,6 +22,7 @@ pub fn Button(
     let button_style = move || {
         let mut s = String::from(
             "cursor:pointer;\
+             position:relative;\
              padding:5px 10px;\
              border-radius:7px;\
              border:none;\
@@ -59,6 +61,25 @@ pub fn Button(
                 Some(c) => view! { <>{c()}</> }.into_any(),
                 None => view! { <>{move || label.get()}</> }.into_any(),
             }}
+
+            // Add the hint
+            {(!hint.is_empty()).then(|| {
+                view! {
+                    <span
+                        style="
+                            position:absolute;
+                            right:4px;
+                            bottom:2px;
+                            font-size:0.65em;
+                            opacity:0.7;
+                            pointer-events:none;
+                            line-height:1;
+                        "
+                    >
+                        {hint.clone()}
+                    </span>
+                }
+            })}
         </button>
     }
 }

@@ -117,7 +117,7 @@ pub fn Whiteboard(signals: ChalkSignals) -> impl IntoView {
     });
 
     let on_pointer_up = Callback::new(move |_: PointerEvent| {
-        WhiteboardController::on_pointer_up(canvas_ref, state);
+        WhiteboardController::on_pointer_up(canvas_ref, state, signals);
     });
 
     let on_wheel = Callback::new(move |e: WheelEvent| {
