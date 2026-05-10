@@ -12,6 +12,7 @@ pub struct ChalkSignals {
 
     pub dark_mode: SignalPair<bool>,
 
+    pub lock_tool: SignalPair<bool>,
     pub tool: SignalPair<Tool>,
     pub palette_open: RwSignal<bool>,
 }
@@ -27,6 +28,7 @@ impl ChalkSignals {
 
             dark_mode: SignalPair::new(true),
 
+            lock_tool: SignalPair::new(false),
             tool: SignalPair::new(Tool::default()),
             palette_open: RwSignal::new(false),
         }

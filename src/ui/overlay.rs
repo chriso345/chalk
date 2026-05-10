@@ -84,6 +84,7 @@ fn render_box(config: BoxConfig, ctx: StoredValue<OverlayContext>) -> impl IntoV
                 "tool-arrow" => tool == Tool::Shape(ShapeKind::Arrow),
                 "tool-rect" => tool == Tool::Shape(ShapeKind::Rect),
                 "tool-circle" => tool == Tool::Shape(ShapeKind::Oval),
+                "tool-lock" => ctx.with_value(|c| c.signals.lock_tool.get()),
                 _ => false,
             }
         } else {

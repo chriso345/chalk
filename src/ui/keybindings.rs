@@ -50,6 +50,7 @@ static KEYBINDINGS: &[Keybinding] = &[
     // Palette
     Keybinding::simple(" ", "ui:open-palette"),
     // Tools
+    Keybinding::simple("q", "action:lock-tool"),
     Keybinding::simple("v", "tool:pan"),
     Keybinding::simple("p", "tool:pen"),
     Keybinding::simple("l", "tool:line"),

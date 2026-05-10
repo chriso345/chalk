@@ -20,6 +20,15 @@ fn build_layout() -> Vec<PanelConfig> {
             .padding(6)
             .add(
                 BoxConfig::icon_button(
+                    "tool-lock",
+                    "tool-lock-icon",
+                    "/public/icons/lock.svg",
+                    "action:lock-tool",
+                )
+                .with_hint("q"),
+            )
+            .add(
+                BoxConfig::icon_button(
                     "tool-pan",
                     "tool-pan-icon",
                     "/public/icons/pan.svg",
@@ -171,6 +180,7 @@ pub fn App() -> impl IntoView {
             "action:zoom-in" => signals.zoom.update(|n| *n = (*n + 10).min(3000)),
             "action:zoom-out" => signals.zoom.update(|n| *n = (*n - 10).max(10)),
 
+            "action:lock-tool" => signals.lock_tool.update(|b| *b = !*b),
             "action:toggle-dark-mode" => signals.dark_mode.update(|b| *b = !*b),
             "ui:open-palette" => signals.palette_open.update(|v| *v = !*v),
 

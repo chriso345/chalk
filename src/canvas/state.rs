@@ -88,9 +88,15 @@ impl WhiteboardState {
         self.tool = tool;
     }
 
-    pub fn begin_drawing(&mut self, screen: Point) {
+    pub fn begin_drawing(&mut self, screen: Point, is_middle_mouse: bool) {
         let world = self.vt.screen_to_world(screen.0, screen.1);
         self.is_drawing = true;
+        if is_middle_mouse {
+            self.last_pan_pos = Some(screen);
+            self.active = None;
+            return;
+        }
+
         self.active = match self.tool {
             Tool::Pan => {
                 self.last_pan_pos = Some(screen);
@@ -102,23 +108,21 @@ impl WhiteboardState {
         };
     }
 
-    pub fn update_drawing(&mut self, screen: Point, snap: bool) {
-        match self.tool {
-            Tool::Pan => {
-                if let Some((lx, ly)) = self.last_pan_pos {
-                    self.vt.offset_x += screen.0 - lx;
-                    self.vt.offset_y += screen.1 - ly;
-                }
-                self.last_pan_pos = Some(screen);
+    pub fn update_drawing(&mut self, screen: Point, snap: bool, is_middle_mouse: bool) {
+        if is_middle_mouse || self.tool == Tool::Pan {
+            if let Some((lx, ly)) = self.last_pan_pos {
+                self.vt.offset_x += screen.0 - lx;
+                self.vt.offset_y += screen.1 - ly;
             }
-            _ => {
-                let world = self.vt.screen_to_world(screen.0, screen.1);
-                match &mut self.active {
-                    Some(ActiveDrawing::Stroke(pts)) => pts.push(world),
-                    Some(ActiveDrawing::Shape(s)) => s.update(world, snap),
-                    None => {}
-                }
-            }
+            self.last_pan_pos = Some(screen);
+            return;
+        }
+
+        let world = self.vt.screen_to_world(screen.0, screen.1);
+        match &mut self.active {
+            Some(ActiveDrawing::Stroke(pts)) => pts.push(world),
+            Some(ActiveDrawing::Shape(s)) => s.update(world, snap),
+            None => {}
         }
     }
 

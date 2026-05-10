@@ -47,7 +47,9 @@ impl WhiteboardController {
         };
         let _ = canvas.set_pointer_capture(e.pointer_id());
 
-        state.update(|s| s.begin_drawing((e.client_x() as f64, e.client_y() as f64)));
+        state.update(|s| {
+            s.begin_drawing((e.client_x() as f64, e.client_y() as f64), e.button() == 1)
+        });
     }
 
     pub fn on_pointer_move(
@@ -61,7 +63,11 @@ impl WhiteboardController {
         e.prevent_default();
 
         state.update(|s| {
-            s.update_drawing((e.client_x() as f64, e.client_y() as f64), e.shift_key())
+            s.update_drawing(
+                (e.client_x() as f64, e.client_y() as f64),
+                e.shift_key(),
+                (e.buttons() & 4) != 0,
+            )
         });
 
         let Some(canvas) = canvas_ref.get() else {
@@ -78,7 +84,9 @@ impl WhiteboardController {
         state.update(|s| {
             if let Some(primitive) = s.end_drawing() {
                 s.history.push(primitive);
-                signals.tool.set(Tool::Pointer);
+                if !signals.lock_tool.get() {
+                    signals.tool.set(Tool::Pointer);
+                }
             }
         });
 
