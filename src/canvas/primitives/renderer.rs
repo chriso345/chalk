@@ -39,12 +39,47 @@ impl PrimitiveRenderer {
                     .unwrap();
                 ctx.fill();
             }
+            // Use Catmull-Rom smoothing for stroke sampling
             [(x0, y0), rest @ ..] => {
                 ctx.begin_path();
-                ctx.move_to(*x0, *y0);
-                for (x, y) in rest {
-                    ctx.line_to(*x, *y);
+
+                ctx.set_line_join("round");
+                ctx.set_line_cap("round");
+                ctx.set_line_width(stroke_width / zoom);
+
+                let mut points: Vec<(f64, f64)> = Vec::with_capacity(pts.len() + 2);
+
+                points.push((*x0, *y0));
+                points.extend_from_slice(rest);
+
+                if let Some(last) = points.last().copied() {
+                    points.push(last);
                 }
+
+                if points.len() < 4 {
+                    ctx.move_to(points[0].0, points[0].1);
+                    for &(x, y) in &points[1..] {
+                        ctx.line_to(x, y);
+                    }
+                    ctx.stroke();
+                    return;
+                }
+
+                ctx.move_to(points[0].0, points[0].1);
+
+                for i in 0..points.len() - 3 {
+                    let p0 = points[i];
+                    let p1 = points[i + 1];
+                    let p2 = points[i + 2];
+                    let p3 = points[i + 3];
+
+                    let cp1 = (p1.0 + (p2.0 - p0.0) / 6.0, p1.1 + (p2.1 - p0.1) / 6.0);
+
+                    let cp2 = (p2.0 - (p3.0 - p1.0) / 6.0, p2.1 - (p3.1 - p1.1) / 6.0);
+
+                    ctx.bezier_curve_to(cp1.0, cp1.1, cp2.0, cp2.1, p2.0, p2.1);
+                }
+
                 ctx.stroke();
             }
         }

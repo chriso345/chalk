@@ -126,7 +126,25 @@ impl WhiteboardState {
 
         let world = self.vt.screen_to_world(screen.0, screen.1);
         match &mut self.active {
-            Some(ActiveDrawing::Stroke(pts)) => pts.push(world),
+            Some(ActiveDrawing::Stroke(pts)) => {
+                let world = self.vt.screen_to_world(screen.0, screen.1);
+
+                let zoom = self.vt.zoom;
+                let min_screen_dist = 8.0; // Tweakable constant
+                let min_world_dist2 = (min_screen_dist / zoom).powi(2);
+
+                if let Some(last) = pts.last() {
+                    let dx = world.0 - last.0;
+                    let dy = world.1 - last.1;
+                    let dist2 = dx * dx + dy * dy;
+
+                    if dist2 < min_world_dist2 {
+                        return;
+                    }
+                }
+
+                pts.push(world);
+            }
             Some(ActiveDrawing::Shape(s)) => s.update(world, snap),
             None => {}
         }

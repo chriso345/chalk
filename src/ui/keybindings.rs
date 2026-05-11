@@ -47,6 +47,8 @@ impl Keybinding {
 
 /// All global keybindings. Evaluated top-to-bottom; first match wins.
 static KEYBINDINGS: &[Keybinding] = &[
+    // Clear cursor
+    Keybinding::simple("Escape", "tool:pointer"),
     // Palette
     Keybinding::simple(" ", "ui:open-palette"),
     // Tools
