@@ -34,12 +34,15 @@ impl ActiveDrawing {
 
 /// The entire state of the whiteboard.
 pub struct WhiteboardState {
-    /// The history of committed strokes and undo/redo state.
+    /// The history of actions and undo/redo state.
     pub history: History,
     /// The stroke currently being drawn, if any. Not yet part of history.
     pub active: Option<ActiveDrawing>,
     /// Whether the user is currently drawing (pointer down).
     pub is_drawing: bool,
+
+    /// Primitives drawn to the canvas
+    pub document: Vec<Primitive>,
 
     /// The current view transform (pan and zoom).
     pub vt: ViewTransform,
@@ -70,6 +73,9 @@ impl WhiteboardState {
             history: History::default(),
             active: None,
             is_drawing: false,
+
+            document: Vec::<Primitive>::new(),
+
             vt: ViewTransform::default(),
             tool: Tool::default(),
 
@@ -134,15 +140,15 @@ impl WhiteboardState {
     }
 
     pub fn undo(&mut self) {
-        self.history.undo();
+        self.history.undo(&mut self.document);
     }
 
     pub fn redo(&mut self) {
-        self.history.redo();
+        self.history.redo(&mut self.document);
     }
 
     pub fn clear(&mut self) {
-        self.history.clear();
+        self.history.clear(&mut self.document);
         self.active = None;
     }
 

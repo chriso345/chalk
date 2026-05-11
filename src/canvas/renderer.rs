@@ -25,7 +25,7 @@ impl WhiteboardRenderer {
         ctx.set_line_cap("round");
         ctx.set_line_join("round");
 
-        for primitive in state.history.visible() {
+        for primitive in &state.document {
             PrimitiveRenderer::draw(&ctx, primitive, state.stroke_width, state.vt.zoom);
         }
 

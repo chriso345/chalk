@@ -1,47 +1,83 @@
-use crate::canvas::primitives::Primitive;
+use crate::canvas::{action::ChalkAction, primitives::Primitive};
 
 #[derive(Clone, Debug, Default)]
 pub struct History {
-    /// All committed primitives
-    primitives: Vec<Primitive>,
-    /// How many strokes are currently "active" (the rest are undone)
+    /// Linear history of actions
+    actions: Vec<ChalkAction>,
+    /// How many actions are "active"
     cursor: usize,
 }
 
 impl History {
-    pub fn push(&mut self, primitive: Primitive) {
-        // Pushing a new shape discards any redoable future
-        self.primitives.truncate(self.cursor);
-        self.primitives.push(primitive);
-        self.cursor = self.primitives.len();
+    pub fn apply(&mut self, doc: &mut Vec<Primitive>, action: ChalkAction) {
+        // discard redo stack
+        self.actions.truncate(self.cursor);
+
+        self.apply_action(doc, &action);
+        self.actions.push(action);
+        self.cursor += 1;
     }
 
-    pub fn undo(&mut self) {
-        if self.cursor > 0 {
-            self.cursor -= 1;
+    fn apply_action(&self, doc: &mut Vec<Primitive>, action: &ChalkAction) {
+        match action {
+            ChalkAction::Add { primitive } => {
+                doc.push(primitive.clone());
+            }
+            ChalkAction::Delete { index, .. } => {
+                doc.remove(*index);
+            }
+            ChalkAction::Transform { index, after, .. } => {
+                doc[*index] = after.clone();
+            }
+            ChalkAction::Clear { .. } => {
+                doc.clear();
+            }
         }
     }
 
-    pub fn redo(&mut self) {
-        if self.cursor < self.primitives.len() {
-            self.cursor += 1;
+    pub fn undo(&mut self, doc: &mut Vec<Primitive>) {
+        if self.cursor == 0 {
+            return;
+        }
+
+        self.cursor -= 1;
+        let action = &self.actions[self.cursor];
+        self.undo_action(doc, action);
+    }
+
+    fn undo_action(&self, doc: &mut Vec<Primitive>, action: &ChalkAction) {
+        match action {
+            ChalkAction::Add { .. } => {
+                doc.pop();
+            }
+            ChalkAction::Delete { primitive, index } => {
+                doc.insert(*index, primitive.clone());
+            }
+            ChalkAction::Transform { index, before, .. } => {
+                doc[*index] = before.clone();
+            }
+            ChalkAction::Clear { previous } => {
+                *doc = previous.clone();
+            }
         }
     }
 
-    pub fn clear(&mut self) {
-        self.primitives.clear();
-        self.cursor = 0;
+    pub fn redo(&mut self, doc: &mut Vec<Primitive>) {
+        if self.cursor >= self.actions.len() {
+            return;
+        }
+
+        let action = &self.actions[self.cursor];
+        self.apply_action(doc, action);
+        self.cursor += 1;
     }
 
-    pub fn visible(&self) -> &[Primitive] {
-        &self.primitives[..self.cursor]
-    }
-
-    pub fn can_undo(&self) -> bool {
-        self.cursor > 0
-    }
-
-    pub fn can_redo(&self) -> bool {
-        self.cursor < self.primitives.len()
+    pub fn clear(&mut self, doc: &mut Vec<Primitive>) {
+        self.apply(
+            doc,
+            ChalkAction::Clear {
+                previous: doc.clone(),
+            },
+        );
     }
 }

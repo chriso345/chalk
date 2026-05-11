@@ -1,6 +1,7 @@
 use leptos::prelude::*;
 use web_sys::{HtmlCanvasElement, PointerEvent, WheelEvent};
 
+use crate::canvas::action::ChalkAction;
 use crate::canvas::tool::Tool;
 use crate::canvas::{renderer::WhiteboardRenderer, state::WhiteboardState};
 use crate::signals::ChalkSignals;
@@ -83,7 +84,8 @@ impl WhiteboardController {
     ) {
         state.update(|s| {
             if let Some(primitive) = s.end_drawing() {
-                s.history.push(primitive);
+                s.history
+                    .apply(&mut s.document, ChalkAction::Add { primitive });
                 if !signals.lock_tool.get() {
                     signals.tool.set(Tool::Pointer);
                 }
