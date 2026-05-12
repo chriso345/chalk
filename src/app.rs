@@ -1,159 +1,13 @@
-use std::sync::Arc;
-
 use leptos::prelude::*;
 
 use crate::canvas::{primitives::ShapeKind, tool::Tool, whiteboard::Whiteboard};
 use crate::signals::ChalkSignals;
+use crate::ui::blocks::build_layout;
+use crate::ui::color::ChalkColor;
 use crate::ui::components::palette::Palette;
 use crate::ui::keybindings;
-use crate::ui::layout::{Anchor, BoxConfig, Direction, Label, PanelConfig};
 use crate::ui::overlay::{Overlay, OverlayContext};
 use crate::utils::on_mount;
-
-fn build_layout() -> Vec<PanelConfig> {
-    vec![
-        // Tool picker - top center
-        PanelConfig::new("toolbar", Anchor::TopCenter)
-            .offset(0, 16)
-            .direction(Direction::Row)
-            .gap(2)
-            .padding(6)
-            .add(
-                BoxConfig::icon_button(
-                    "tool-lock",
-                    "tool-lock-icon",
-                    "/public/icons/lock.svg",
-                    "action:lock-tool",
-                )
-                .with_hint("q"),
-            )
-            .add(
-                BoxConfig::icon_button(
-                    "tool-pan",
-                    "tool-pan-icon",
-                    "/public/icons/pan.svg",
-                    "tool:pan",
-                )
-                .with_hint("v"),
-            )
-            .add(BoxConfig::icon_button(
-                "tool-pointer",
-                "tool-pointer-icon",
-                "/public/icons/pointer.svg",
-                "tool:pointer",
-            ))
-            .add(
-                BoxConfig::icon_button(
-                    "tool-pen",
-                    "tool-pen-icon",
-                    "/public/icons/pencil.svg",
-                    "tool:pen",
-                )
-                .with_hint("p"),
-            )
-            .add(BoxConfig::divider())
-            .add(
-                BoxConfig::icon_button(
-                    "tool-line",
-                    "tool-line-icon",
-                    "/public/icons/line.svg",
-                    "tool:line",
-                )
-                .with_hint("l"),
-            )
-            .add(
-                BoxConfig::icon_button(
-                    "tool-arrow",
-                    "tool-arrow-icon",
-                    "/public/icons/arrow.svg",
-                    "tool:arrow",
-                )
-                .with_hint("a"),
-            )
-            .add(
-                BoxConfig::icon_button(
-                    "tool-rect",
-                    "tool-rect-icon",
-                    "/public/icons/square.svg",
-                    "tool:rect",
-                )
-                .with_hint("r"),
-            )
-            .add(
-                BoxConfig::icon_button(
-                    "tool-circle",
-                    "tool-circle-icon",
-                    "/public/icons/circle.svg",
-                    "tool:circle",
-                )
-                .with_hint("c"),
-            ),
-        // Zoom badge - bottom right
-        PanelConfig::new("zoom-badge", Anchor::BottomRight)
-            .offset(-20, -20)
-            .direction(Direction::Row)
-            .gap(0)
-            .padding(5)
-            .add(BoxConfig::icon_button(
-                "zoom-out",
-                "zoom-out-icon",
-                "/public/icons/minus.svg",
-                "action:zoom-out",
-            ))
-            .add(BoxConfig::button(
-                "zoom-pct",
-                Label::Dynamic(Arc::new(move |ctx: &OverlayContext| {
-                    let zoom_pct = ctx.signals.zoom.read_only().get();
-                    format!("{zoom_pct}%")
-                })),
-                "action:reset-zoom",
-            ))
-            .add(BoxConfig::icon_button(
-                "zoom-in",
-                "zoom-in-icon",
-                "/public/icons/plus.svg",
-                "action:zoom-in",
-            )),
-        // Undo / redo / clear - bottom left
-        PanelConfig::new("undo-redo", Anchor::BottomLeft)
-            .offset(20, -20)
-            .direction(Direction::Row)
-            .gap(4)
-            .padding(6)
-            .add(BoxConfig::icon_button(
-                "action-undo",
-                "action-undo-icon",
-                "/public/icons/undo.svg",
-                "action:undo",
-            ))
-            .add(BoxConfig::divider())
-            .add(BoxConfig::icon_button(
-                "action-redo",
-                "action-redo-icon",
-                "/public/icons/redo.svg",
-                "action:redo",
-            ))
-            .add(BoxConfig::divider())
-            .add(BoxConfig::icon_button(
-                "action-clear",
-                "action-clear-icon",
-                "/public/icons/trash.svg",
-                "action:clear",
-            )),
-        // Dark mode toggle - top right
-        PanelConfig::new("dark-mode-toggle", Anchor::TopRight)
-            .offset(-20, 20)
-            .direction(Direction::Row)
-            .gap(0)
-            .padding(6)
-            .add(BoxConfig::icon_button(
-                "toggle-dark-mode",
-                "toggle-dark-mode-icon",
-                "/public/icons/moon.svg",
-                "action:toggle-dark-mode",
-            )),
-    ]
-}
 
 #[component]
 pub fn App() -> impl IntoView {
@@ -183,6 +37,21 @@ pub fn App() -> impl IntoView {
             "action:lock-tool" => signals.lock_tool.update(|b| *b = !*b),
             "action:toggle-dark-mode" => signals.dark_mode.update(|b| *b = !*b),
             "ui:open-palette" => signals.palette_open.update(|v| *v = !*v),
+
+            action if action.starts_with("action:set-color-") => {
+                let color = action.trim_start_matches("action:set-color-");
+                let ccolor = ChalkColor::from_word(color);
+                if ccolor.is_some() {
+                    signals.color.set(ccolor.unwrap());
+                }
+            }
+
+            action if action.starts_with("action:set-stroke-") => {
+                let width = action.trim_start_matches("action:set-stroke-").parse();
+                if let Ok(width) = width {
+                    signals.stroke_width.set(width);
+                }
+            }
 
             _ => {
                 leptos::logging::log!("Unknown action: {action}");

@@ -1,27 +1,34 @@
+pub mod geometry;
 pub mod renderer;
 pub mod shape;
+pub mod style;
+pub mod transform;
 
-pub use shape::{Shape, ShapeInProgress, ShapeKind};
+pub use geometry::Geometry;
+pub use shape::{ShapeInProgress, ShapeKind};
+pub use style::PrimitiveStyle;
+pub use transform::Transform;
 
-use crate::canvas::types::Point;
-
-/// The atomic unit stored in history.
-///
-/// `Group` enables both hand-constructed groups and generator output to be
-/// committed and undone as a single step.
+/// A fully self-contained drawable unit.
+/// Carries its own geometry, style, and transform.
+/// Groups / compound objects are handled at a higher layer (see `Element`).
 #[derive(Clone, Debug)]
-pub enum Primitive {
-    Stroke(Vec<Point>),
-    Shape(Shape),
-    Group(Vec<Primitive>),
+pub struct Primitive {
+    pub geometry: Geometry,
+    pub style: PrimitiveStyle,
+    pub transform: Transform,
 }
 
 impl Primitive {
-    pub fn is_empty(&self) -> bool {
-        match self {
-            Primitive::Stroke(pts) => pts.is_empty(),
-            Primitive::Shape(_) => false,
-            Primitive::Group(children) => children.is_empty(),
+    pub fn new(geometry: Geometry, style: PrimitiveStyle) -> Self {
+        Self {
+            geometry,
+            style,
+            transform: Transform::default(),
         }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.geometry.is_empty()
     }
 }

@@ -18,6 +18,24 @@ pub fn Whiteboard(signals: ChalkSignals) -> impl IntoView {
     Effect::new({
         let repaint = repaint.clone();
         move |_| {
+            let _ = signals.color.get();
+            state.update(|s| s.set_stroke_color(signals.color.get()));
+            repaint();
+        }
+    });
+
+    Effect::new({
+        let repaint = repaint.clone();
+        move |_| {
+            let _ = signals.stroke_width.get();
+            state.update(|s| s.set_stroke_width(signals.stroke_width.get()));
+            repaint();
+        }
+    });
+
+    Effect::new({
+        let repaint = repaint.clone();
+        move |_| {
             let _ = signals.clear.get();
             state.update(|s| s.clear());
             repaint();

@@ -1,9 +1,12 @@
-use crate::canvas::{
-    history::History,
-    primitives::{Primitive, ShapeInProgress},
-    styles::ChalkStyles,
-    tool::Tool,
-    types::{Point, ViewTransform},
+use crate::{
+    canvas::{
+        history::History,
+        primitives::{Geometry, Primitive, PrimitiveStyle, ShapeInProgress},
+        styles::ChalkStyles,
+        tool::Tool,
+        types::{Point, ViewTransform},
+    },
+    ui::color::ChalkColor,
 };
 
 /// What the user is currently drawing. Cleared on pointer-up.
@@ -14,21 +17,24 @@ pub enum ActiveDrawing {
 }
 
 impl ActiveDrawing {
-    /// Consume into a `Primitive` for committing to history, or `None` if empty.
-    pub fn into_primitive(self) -> Option<Primitive> {
-        match self {
-            ActiveDrawing::Stroke(pts) if pts.is_empty() => None,
-            ActiveDrawing::Stroke(pts) => Some(Primitive::Stroke(pts)),
-            ActiveDrawing::Shape(s) => Some(Primitive::Shape(s.build())),
-        }
+    /// Preview as primitives for rendering. Style is provided externally.
+    pub fn preview(&self, style: &PrimitiveStyle) -> Option<Vec<Primitive>> {
+        let geom = match self {
+            ActiveDrawing::Stroke(pts) if pts.is_empty() => return None,
+            ActiveDrawing::Stroke(pts) => Geometry::Stroke(pts.clone()),
+            ActiveDrawing::Shape(s) => Geometry::from(s.build()),
+        };
+        Some(vec![Primitive::new(geom, style.clone())])
     }
 
-    /// Borrow as a preview `Primitive` without consuming.
-    pub fn preview(&self) -> Option<Vec<Primitive>> {
-        match self {
-            ActiveDrawing::Stroke(pts) => Some(vec![Primitive::Stroke(pts.clone())]),
-            ActiveDrawing::Shape(s) => Some(vec![Primitive::Shape(s.build())]),
-        }
+    /// Consume into a committed `Primitive`, stamping the provided style.
+    pub fn into_primitive(self, style: PrimitiveStyle) -> Option<Primitive> {
+        let geom = match self {
+            ActiveDrawing::Stroke(pts) if pts.is_empty() => return None,
+            ActiveDrawing::Stroke(pts) => Geometry::Stroke(pts),
+            ActiveDrawing::Shape(s) => s.build(),
+        };
+        Some(Primitive::new(geom, style))
     }
 }
 
@@ -51,10 +57,7 @@ pub struct WhiteboardState {
     pub tool: Tool,
 
     pub style: ChalkStyles<'static>,
-
-    // TODO: This should be scaled with zoom to keep it visually consistent.
-    /// Line width in world units (not pixels, so it scales with zoom).
-    pub stroke_width: f64,
+    pub current_style: PrimitiveStyle,
 
     /// Screen-space position of the last pointer event, used by Pan to
     /// compute deltas.
@@ -80,7 +83,7 @@ impl WhiteboardState {
             tool: Tool::default(),
 
             style: ChalkStyles::dark(),
-            stroke_width: 2.0,
+            current_style: PrimitiveStyle::new("#FF0000", 2.0),
 
             last_pan_pos: None,
         }
@@ -92,6 +95,14 @@ impl WhiteboardState {
         self.is_drawing = false;
         self.last_pan_pos = None;
         self.tool = tool;
+    }
+
+    pub fn set_stroke_color(&mut self, color: ChalkColor) {
+        self.current_style.stroke_color = Some(color.to_hex());
+    }
+
+    pub fn set_stroke_width(&mut self, width: f64) {
+        self.current_style.stroke_width = width;
     }
 
     pub fn begin_drawing(&mut self, screen: Point, is_middle_mouse: bool) {
@@ -154,7 +165,9 @@ impl WhiteboardState {
     pub fn end_drawing(&mut self) -> Option<Primitive> {
         self.is_drawing = false;
         self.last_pan_pos = None;
-        self.active.take().and_then(|a| a.into_primitive())
+        self.active
+            .take()
+            .and_then(|a| a.into_primitive(self.current_style.clone()))
     }
 
     pub fn undo(&mut self) {

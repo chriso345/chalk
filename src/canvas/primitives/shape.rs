@@ -1,6 +1,5 @@
-use crate::canvas::types::Point;
+use crate::canvas::{primitives::geometry::Geometry, types::Point};
 
-/// The kind of shape tool currently selected.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ShapeKind {
     Line,
@@ -9,18 +8,7 @@ pub enum ShapeKind {
     Oval,
 }
 
-/// A fully-specified geometric shape stored in history.
-#[derive(Clone, Debug)]
-pub enum Shape {
-    Line { start: Point, end: Point },
-    Arrow { start: Point, end: Point },
-    Rect { origin: Point, size: (f64, f64) },
-    // Circle { center: Point, radius: f64 },
-    Oval { origin: Point, size: (f64, f64) },
-}
-
-/// Transient state for a shape being drawn. Stores anchor + live cursor so
-/// the controller can call `build` on every move event.
+/// Transient in-progress shape being drawn. Produces `Geometry` on `build()`.
 #[derive(Clone, Debug)]
 pub struct ShapeInProgress {
     pub kind: ShapeKind,
@@ -42,43 +30,38 @@ impl ShapeInProgress {
             self.current = current;
             return;
         }
-
         match self.kind {
             ShapeKind::Rect | ShapeKind::Oval => {
                 let (ax, ay) = self.anchor;
                 let (cx, cy) = current;
-
                 let dx = cx - ax;
                 let dy = cy - ay;
-
                 let size = dx.abs().max(dy.abs());
-
                 self.current = (ax + size.copysign(dx), ay + size.copysign(dy));
             }
-
             _ => {
                 self.current = current;
             }
         }
     }
 
-    pub fn build(&self) -> Shape {
+    pub fn build(&self) -> Geometry {
         let (ax, ay) = self.anchor;
         let (cx, cy) = self.current;
         match self.kind {
-            ShapeKind::Line => Shape::Line {
+            ShapeKind::Line => Geometry::Line {
                 start: self.anchor,
                 end: self.current,
             },
-            ShapeKind::Arrow => Shape::Arrow {
+            ShapeKind::Arrow => Geometry::Arrow {
                 start: self.anchor,
                 end: self.current,
             },
-            ShapeKind::Rect => Shape::Rect {
+            ShapeKind::Rect => Geometry::Rect {
                 origin: (ax.min(cx), ay.min(cy)),
                 size: ((cx - ax).abs(), (cy - ay).abs()),
             },
-            ShapeKind::Oval => Shape::Oval {
+            ShapeKind::Oval => Geometry::Oval {
                 origin: (ax.min(cx), ay.min(cy)),
                 size: ((cx - ax).abs(), (cy - ay).abs()),
             },

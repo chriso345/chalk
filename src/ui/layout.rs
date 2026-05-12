@@ -59,13 +59,27 @@ pub struct BoxConfig {
 #[derive(Clone, Debug)]
 pub enum BoxKind {
     /// Clickable button. `on_click` is the action id forwarded to the app.
-    Button { action: &'static str },
+    Button {
+        action: &'static str,
+    },
     /// Static text label.
     Label,
     /// Horizontal or vertical divider.
     Divider,
     /// Image
-    Image { src: &'static str },
+    Image {
+        src: &'static str,
+    },
+    // Circle filled with `color`, acts as a button.
+    Swatch {
+        color: &'static str,
+        action: &'static str,
+    },
+    // Horizontal line at `width` thickness, acts as a button.
+    StrokeWidth {
+        width: u32,
+        action: &'static str,
+    },
 }
 
 /// A panel groups related boxes and pins them to a screen anchor.
@@ -174,6 +188,26 @@ impl BoxConfig {
             label: None,
             hint: None,
             kind: BoxKind::Divider,
+            children: None,
+        }
+    }
+
+    pub fn swatch(id: &'static str, color: &'static str, action: &'static str) -> Self {
+        Self {
+            id,
+            label: None,
+            hint: None,
+            kind: BoxKind::Swatch { color, action },
+            children: None,
+        }
+    }
+
+    pub fn stroke_width(id: &'static str, width: u32, action: &'static str) -> Self {
+        Self {
+            id,
+            label: None,
+            hint: None,
+            kind: BoxKind::StrokeWidth { width, action },
             children: None,
         }
     }

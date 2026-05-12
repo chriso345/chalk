@@ -19,20 +19,14 @@ impl WhiteboardRenderer {
         ctx.translate(state.vt.offset_x, state.vt.offset_y).unwrap();
         ctx.scale(state.vt.zoom, state.vt.zoom).unwrap();
 
-        ctx.set_stroke_style_str(state.style.get_stroke());
-        ctx.set_fill_style_str(state.style.get_stroke());
-        ctx.set_line_width(state.stroke_width / state.vt.zoom);
-        ctx.set_line_cap("round");
-        ctx.set_line_join("round");
-
         for primitive in &state.document {
-            PrimitiveRenderer::draw(&ctx, primitive, state.stroke_width, state.vt.zoom);
+            PrimitiveRenderer::draw(&ctx, primitive);
         }
 
         if let Some(active) = &state.active {
-            if let Some(prev) = &active.preview() {
-                for p in prev {
-                    PrimitiveRenderer::draw(&ctx, p, state.stroke_width, state.vt.zoom);
+            if let Some(prev) = active.preview(&state.current_style) {
+                for p in &prev {
+                    PrimitiveRenderer::draw(&ctx, p);
                 }
             }
         }
