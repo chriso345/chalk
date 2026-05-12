@@ -76,7 +76,12 @@ fn render_box(
 
     // Determine if this is a tool button and if it is selected
     let is_tool_button = config.id.starts_with("tool-");
+    let is_swatch = config.id.starts_with("color-");
+    let is_stroke = config.id.starts_with("stroke-");
+
     let tool_signal = ctx.with_value(|c| c.signals.tool.read_only());
+    let color_signal = ctx.with_value(|c| c.signals.color.read_only());
+    let stroke_signal = ctx.with_value(|c| c.signals.stroke_width.read_only());
     let active = Signal::derive(move || {
         if is_tool_button {
             let tool = tool_signal.get();
@@ -91,6 +96,14 @@ fn render_box(
                 "tool-lock" => ctx.with_value(|c| c.signals.lock_tool.get()),
                 _ => false,
             }
+        } else if is_swatch {
+            let current = color_signal.get();
+            let swatch_name = config.id.trim_start_matches("color-");
+            current.to_word() == Some(swatch_name)
+        } else if is_stroke {
+            let current = stroke_signal.get();
+            let width_str = config.id.trim_start_matches("stroke-");
+            width_str.parse::<f64>().ok() == Some(current)
         } else {
             false
         }

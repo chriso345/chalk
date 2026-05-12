@@ -36,7 +36,7 @@ impl ChalkSignals {
             palette_open: RwSignal::new(false),
 
             color: SignalPair::new(ChalkColor::new()),
-            stroke_width: SignalPair::new(2_f64),
+            stroke_width: SignalPair::new(4_f64),
         }
     }
 }

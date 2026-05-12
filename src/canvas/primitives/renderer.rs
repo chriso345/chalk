@@ -47,7 +47,7 @@ impl PrimitiveRenderer {
         stroke_color: &str,
     ) {
         match geometry {
-            Geometry::Stroke(pts) => Self::draw_stroke(ctx, pts, stroke_width),
+            Geometry::Stroke(pts) => Self::draw_stroke(ctx, pts, stroke_width, stroke_color),
             Geometry::Line { start, end } => Self::draw_line(ctx, *start, *end),
             Geometry::Arrow { start, end } => {
                 Self::draw_arrow(ctx, *start, *end, stroke_width, stroke_color)
@@ -58,12 +58,18 @@ impl PrimitiveRenderer {
         }
     }
 
-    fn draw_stroke(ctx: &CanvasRenderingContext2d, pts: &[(f64, f64)], screen_stroke: f64) {
+    fn draw_stroke(
+        ctx: &CanvasRenderingContext2d,
+        pts: &[(f64, f64)],
+        screen_stroke: f64,
+        stroke_color: &str,
+    ) {
         match pts {
             [] => {}
             [(x, y)] => {
                 ctx.begin_path();
                 ctx.arc(*x, *y, screen_stroke / 2.0, 0.0, TAU).unwrap();
+                ctx.set_fill_style_str(stroke_color);
                 ctx.fill();
             }
             [(x0, y0), rest @ ..] => {

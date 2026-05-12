@@ -18,36 +18,19 @@ pub fn build_layout() -> Vec<PanelConfig> {
 }
 
 fn picker_panel() -> PanelConfig {
-    PanelConfig::new("picker-panel", Anchor::CenterLeft)
+    let mut panel = PanelConfig::new("picker-panel", Anchor::CenterLeft)
         .offset(20, 0)
         .direction(Direction::Column)
         .gap(4)
-        .padding(6)
-        .add(BoxConfig::swatch(
-            "color-white",
-            "#F2F0EF",
-            "action:set-color-white",
-        ))
-        .add(BoxConfig::swatch(
-            "color-black",
-            "#1A1A18",
-            "action:set-color-black",
-        ))
-        .add(BoxConfig::swatch(
-            "color-red",
-            "#E24B4A",
-            "action:set-color-red",
-        ))
-        .add(BoxConfig::swatch(
-            "color-green",
-            "#4AB557",
-            "action:set-color-green",
-        ))
-        .add(BoxConfig::swatch(
-            "color-blue",
-            "#378ADD",
-            "action:set-color-blue",
-        ))
+        .padding(6);
+
+    for entry in super::color::COLORS {
+        let id = Box::leak(format!("color-{}", entry.name).into_boxed_str());
+        let action = Box::leak(format!("action:set-color-{}", entry.name).into_boxed_str());
+        panel = panel.add(BoxConfig::swatch(id, entry.color.to_hex(), action));
+    }
+
+    panel
         .add(BoxConfig::divider())
         .add(BoxConfig::stroke_width(
             "stroke-2",

@@ -98,7 +98,7 @@ impl WhiteboardState {
     }
 
     pub fn set_stroke_color(&mut self, color: ChalkColor) {
-        self.current_style.stroke_color = Some(color.to_hex());
+        self.current_style.stroke_color = Some(color.to_hex().to_string());
     }
 
     pub fn set_stroke_width(&mut self, width: f64) {
