@@ -2,9 +2,12 @@ use std::sync::Arc;
 
 use leptos::reactive::traits::Get;
 
-use crate::ui::{
-    layout::{Anchor, BoxConfig, Direction, Label, PanelConfig},
-    overlay::OverlayContext,
+use crate::{
+    icon,
+    ui::{
+        layout::{Anchor, BoxConfig, Direction, Label, PanelConfig},
+        overlay::OverlayContext,
+    },
 };
 
 pub fn build_layout() -> Vec<PanelConfig> {
@@ -59,41 +62,31 @@ fn tool_picker_panel() -> PanelConfig {
             BoxConfig::icon_button(
                 "tool-lock",
                 "tool-lock-icon",
-                "/public/icons/lock.svg",
+                icon!("lock.svg"),
                 "action:lock-tool",
             )
             .with_hint("q"),
         )
         .add(
-            BoxConfig::icon_button(
-                "tool-pan",
-                "tool-pan-icon",
-                "/public/icons/pan.svg",
-                "tool:pan",
-            )
-            .with_hint("v"),
+            BoxConfig::icon_button("tool-pan", "tool-pan-icon", icon!("pan.svg"), "tool:pan")
+                .with_hint("v"),
         )
         .add(BoxConfig::icon_button(
             "tool-pointer",
             "tool-pointer-icon",
-            "/public/icons/pointer.svg",
+            icon!("pointer.svg"),
             "tool:pointer",
         ))
         .add(
-            BoxConfig::icon_button(
-                "tool-pen",
-                "tool-pen-icon",
-                "/public/icons/pencil.svg",
-                "tool:pen",
-            )
-            .with_hint("p"),
+            BoxConfig::icon_button("tool-pen", "tool-pen-icon", icon!("pencil.svg"), "tool:pen")
+                .with_hint("p"),
         )
         .add(BoxConfig::divider())
         .add(
             BoxConfig::icon_button(
                 "tool-line",
                 "tool-line-icon",
-                "/public/icons/line.svg",
+                icon!("line.svg"),
                 "tool:line",
             )
             .with_hint("l"),
@@ -102,7 +95,7 @@ fn tool_picker_panel() -> PanelConfig {
             BoxConfig::icon_button(
                 "tool-arrow",
                 "tool-arrow-icon",
-                "/public/icons/arrow.svg",
+                icon!("arrow.svg"),
                 "tool:arrow",
             )
             .with_hint("a"),
@@ -111,7 +104,7 @@ fn tool_picker_panel() -> PanelConfig {
             BoxConfig::icon_button(
                 "tool-rect",
                 "tool-rect-icon",
-                "/public/icons/square.svg",
+                icon!("square.svg"),
                 "tool:rect",
             )
             .with_hint("r"),
@@ -120,7 +113,7 @@ fn tool_picker_panel() -> PanelConfig {
             BoxConfig::icon_button(
                 "tool-circle",
                 "tool-circle-icon",
-                "/public/icons/circle.svg",
+                icon!("circle.svg"),
                 "tool:circle",
             )
             .with_hint("c"),
@@ -136,7 +129,7 @@ fn zoom_corner() -> PanelConfig {
         .add(BoxConfig::icon_button(
             "zoom-out",
             "zoom-out-icon",
-            "/public/icons/minus.svg",
+            icon!("minus.svg"),
             "action:zoom-out",
         ))
         .add(BoxConfig::button(
@@ -150,7 +143,7 @@ fn zoom_corner() -> PanelConfig {
         .add(BoxConfig::icon_button(
             "zoom-in",
             "zoom-in-icon",
-            "/public/icons/plus.svg",
+            icon!("plus.svg"),
             "action:zoom-in",
         ))
 }
@@ -164,21 +157,21 @@ fn undo_redo_panel() -> PanelConfig {
         .add(BoxConfig::icon_button(
             "action-undo",
             "action-undo-icon",
-            "/public/icons/undo.svg",
+            icon!("undo.svg"),
             "action:undo",
         ))
         .add(BoxConfig::divider())
         .add(BoxConfig::icon_button(
             "action-redo",
             "action-redo-icon",
-            "/public/icons/redo.svg",
+            icon!("redo.svg"),
             "action:redo",
         ))
         .add(BoxConfig::divider())
         .add(BoxConfig::icon_button(
             "action-clear",
             "action-clear-icon",
-            "/public/icons/trash.svg",
+            icon!("trash.svg"),
             "action:clear",
         ))
 }
@@ -192,7 +185,7 @@ fn dark_toggle() -> PanelConfig {
         .add(BoxConfig::icon_button(
             "toggle-dark-mode",
             "toggle-dark-mode-icon",
-            "/public/icons/moon.svg",
+            icon!("moon.svg"),
             "action:toggle-dark-mode",
         ))
 }
