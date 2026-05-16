@@ -3,6 +3,8 @@ use wasm_bindgen::JsCast;
 use wasm_bindgen::prelude::*;
 use web_sys::{PointerEvent, WheelEvent};
 
+use crate::canvas::primitives::handle::HandleKind;
+use crate::canvas::tool::Tool;
 use crate::canvas::{
     controller::{MAX_ZOOM, MIN_ZOOM, WhiteboardController, make_repaint},
     state::WhiteboardState,
@@ -130,8 +132,20 @@ pub fn Whiteboard(signals: ChalkSignals) -> impl IntoView {
         WhiteboardController::on_pointer_down(e, canvas_ref, state);
     });
 
+    let hovered_handle: RwSignal<Option<HandleKind>> = RwSignal::new(None);
+
     let on_pointer_move = Callback::new(move |e: PointerEvent| {
+        let screen = (e.client_x() as f64, e.client_y() as f64);
         WhiteboardController::on_pointer_move(e, canvas_ref, state);
+
+        state.with_untracked(|s| {
+            if s.tool == Tool::Pointer {
+                let world = s.vt.screen_to_world(screen.0, screen.1);
+                hovered_handle.set(s.hit_test_handle(world, s.vt.zoom));
+            } else {
+                hovered_handle.set(None);
+            }
+        });
     });
 
     let on_pointer_up = Callback::new(move |_: PointerEvent| {
@@ -142,7 +156,14 @@ pub fn Whiteboard(signals: ChalkSignals) -> impl IntoView {
         WhiteboardController::on_wheel(e, canvas_ref, state, signals);
     });
 
-    let cursor = move || signals.tool.get().cursor();
+    let cursor = move || {
+        if signals.tool.get() == Tool::Pointer {
+            if let Some(handle) = hovered_handle.get() {
+                return handle.cursor().to_string();
+            }
+        }
+        signals.tool.get().cursor().to_string()
+    };
 
     view! {
         <canvas

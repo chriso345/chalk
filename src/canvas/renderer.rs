@@ -2,7 +2,9 @@ use wasm_bindgen::JsCast;
 use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement, js_sys};
 
 use crate::canvas::{
-    primitives::{Primitive, geometry::primitives_aabb, renderer::PrimitiveRenderer},
+    primitives::{
+        Primitive, geometry::primitives_aabb, handle::HandleKind, renderer::PrimitiveRenderer,
+    },
     state::WhiteboardState,
 };
 
@@ -57,14 +59,18 @@ pub fn get_ctx(canvas: &HtmlCanvasElement) -> Option<CanvasRenderingContext2d> {
 }
 
 fn draw_selection_highlight(ctx: &CanvasRenderingContext2d, prims: &[&Primitive], zoom: f64) {
+    let bb_color = "#4A90E2";
+    let handle_color = "#ffffff";
+
     let Some((minx, miny, maxx, maxy)) = primitives_aabb(prims.iter().copied()) else {
         return;
     };
-    let pad = 6.0;
-    let line_width = 2.5;
+    let pad = 6.0 / zoom;
+    let handle_radius = 5.0 / zoom;
+
     ctx.save();
-    ctx.set_stroke_style_str("#4A90E2");
-    ctx.set_line_width(line_width / zoom);
+    ctx.set_stroke_style_str(bb_color);
+    ctx.set_line_width(1.5 / zoom);
     ctx.set_line_dash(&js_sys::Array::of2(
         &wasm_bindgen::JsValue::from_f64(6.0 / zoom),
         &wasm_bindgen::JsValue::from_f64(4.0 / zoom),
@@ -76,5 +82,21 @@ fn draw_selection_highlight(ctx: &CanvasRenderingContext2d, prims: &[&Primitive]
         (maxx - minx) + pad * 2.0,
         (maxy - miny) + pad * 2.0,
     );
+
+    // Draw handles.
+    ctx.set_line_dash(&js_sys::Array::new()).unwrap();
+    ctx.set_fill_style_str(handle_color);
+    ctx.set_stroke_style_str(bb_color);
+    ctx.set_line_width(1.5 / zoom);
+
+    for &kind in HandleKind::ALL {
+        let (hx, hy) = kind.position(minx, miny, maxx, maxy);
+        ctx.begin_path();
+        ctx.arc(hx, hy, handle_radius, 0.0, std::f64::consts::TAU)
+            .unwrap();
+        ctx.fill();
+        ctx.stroke();
+    }
+
     ctx.restore();
 }

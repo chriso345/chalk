@@ -1,4 +1,5 @@
 pub mod geometry;
+pub mod handle;
 pub mod renderer;
 pub mod shape;
 pub mod style;

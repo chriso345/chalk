@@ -2,7 +2,7 @@ use crate::canvas::types::Point;
 
 /// The pure geometric description of a primitive — no style, no transform.
 /// Polygon is reserved for future use.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Geometry {
     /// Freehand polyline (smoothed at render time with Catmull-Rom).
     Stroke(Vec<Point>),
@@ -47,6 +47,70 @@ impl Geometry {
         match self {
             Geometry::Stroke(pts) => pts.is_empty(),
             _ => false,
+        }
+    }
+
+    pub fn remap_aabb(
+        &self,
+        (old_minx, old_miny, old_maxx, old_maxy): (f64, f64, f64, f64),
+        (new_minx, new_miny, new_maxx, new_maxy): (f64, f64, f64, f64),
+    ) -> Self {
+        let remap = |v: f64, old_min: f64, old_max: f64, new_min: f64, new_max: f64| -> f64 {
+            let old_size = old_max - old_min;
+            if old_size.abs() < f64::EPSILON {
+                return new_min;
+            }
+            new_min + (v - old_min) / old_size * (new_max - new_min)
+        };
+
+        let rx = |x: f64| remap(x, old_minx, old_maxx, new_minx, new_maxx);
+        let ry = |y: f64| remap(y, old_miny, old_maxy, new_miny, new_maxy);
+
+        match self {
+            Geometry::Stroke(pts) => {
+                Geometry::Stroke(pts.iter().map(|&(x, y)| (rx(x), ry(y))).collect())
+            }
+            Geometry::Line {
+                start: (x0, y0),
+                end: (x1, y1),
+            } => Geometry::Line {
+                start: (rx(*x0), ry(*y0)),
+                end: (rx(*x1), ry(*y1)),
+            },
+            Geometry::Arrow {
+                start: (x0, y0),
+                end: (x1, y1),
+            } => Geometry::Arrow {
+                start: (rx(*x0), ry(*y0)),
+                end: (rx(*x1), ry(*y1)),
+            },
+            Geometry::Rect {
+                origin: (ox, oy),
+                size: (w, h),
+            } => {
+                let x0 = rx(*ox);
+                let y0 = ry(*oy);
+                let x1 = rx(*ox + *w);
+                let y1 = ry(*oy + *h);
+                Geometry::Rect {
+                    origin: (x0.min(x1), y0.min(y1)),
+                    size: ((x1 - x0).abs(), (y1 - y0).abs()),
+                }
+            }
+            Geometry::Oval {
+                origin: (ox, oy),
+                size: (w, h),
+            } => {
+                let x0 = rx(*ox);
+                let y0 = ry(*oy);
+                let x1 = rx(*ox + *w);
+                let y1 = ry(*oy + *h);
+                Geometry::Oval {
+                    origin: (x0.min(x1), y0.min(y1)),
+                    size: ((x1 - x0).abs(), (y1 - y0).abs()),
+                }
+            }
+            other => other.clone(),
         }
     }
 }

@@ -55,6 +55,15 @@ impl WhiteboardController {
         state.update(|s| {
             if !is_middle && s.tool == Tool::Pointer {
                 let world = s.vt.screen_to_world(screen.0, screen.1);
+                let zoom = s.vt.zoom;
+
+                // Handles take priority over everything.
+                if let Some(handle) = s.hit_test_handle(world, zoom) {
+                    s.drag_handle = Some(handle);
+                    s.begin_handle_drag(screen);
+                    return;
+                }
+
                 let has_selection = s.apply_selection(world, ctrl);
                 if has_selection {
                     s.begin_drag(screen);
@@ -79,11 +88,17 @@ impl WhiteboardController {
         let is_middle = (e.buttons() & 4) != 0;
 
         state.update(|s| {
-            if s.tool == Tool::Pointer && !s.selected.is_empty() && !is_middle {
-                s.update_drag(screen);
-            } else {
-                s.update_drawing(screen, e.shift_key(), is_middle);
+            if s.tool == Tool::Pointer && !is_middle {
+                if s.drag_handle.is_some() {
+                    s.update_handle_drag(screen, e.shift_key());
+                    return;
+                }
+                if !s.selected.is_empty() {
+                    s.update_drag(screen);
+                    return;
+                }
             }
+            s.update_drawing(screen, e.shift_key(), is_middle);
         });
 
         let Some(canvas) = canvas_ref.get() else {
@@ -98,31 +113,63 @@ impl WhiteboardController {
         signals: ChalkSignals,
     ) {
         state.update(|s| {
-            if s.tool == Tool::Pointer && !s.selected.is_empty() {
-                let moves = s.end_drag();
-                if !moves.is_empty() {
-                    let actions = moves
-                        .into_iter()
-                        .map(|(idx, before_pos, _after_pos)| {
-                            let mut before = s.document[idx].clone();
-                            before.transform.position = before_pos;
-                            let after = s.document[idx].clone();
-                            ChalkAction::Transform {
-                                before,
-                                after,
-                                index: idx,
-                            }
-                        })
-                        .collect::<Vec<_>>();
-
-                    let action = if actions.len() == 1 {
-                        actions.into_iter().next().unwrap()
-                    } else {
-                        ChalkAction::Batch { actions }
-                    };
-                    s.history.apply(&mut s.document, action);
+            if s.tool == Tool::Pointer {
+                // Handle resize commit.
+                if s.drag_handle.is_some() {
+                    let moves = s.end_handle_drag();
+                    if !moves.is_empty() {
+                        let actions = moves
+                            .into_iter()
+                            .map(|(idx, before_geom, before_pos, after_geom, after_pos)| {
+                                let mut before = s.document[idx].clone();
+                                before.geometry = before_geom;
+                                before.transform.position = before_pos;
+                                let mut after = s.document[idx].clone();
+                                after.geometry = after_geom;
+                                after.transform.position = after_pos;
+                                ChalkAction::Transform {
+                                    before,
+                                    after,
+                                    index: idx,
+                                }
+                            })
+                            .collect::<Vec<_>>();
+                        let action = if actions.len() == 1 {
+                            actions.into_iter().next().unwrap()
+                        } else {
+                            ChalkAction::Batch { actions }
+                        };
+                        s.history.apply(&mut s.document, action);
+                    }
+                    return;
                 }
-                return;
+
+                // Normal drag commit.
+                if !s.selected.is_empty() {
+                    let moves = s.end_drag();
+                    if !moves.is_empty() {
+                        let actions = moves
+                            .into_iter()
+                            .map(|(idx, before_pos, _)| {
+                                let mut before = s.document[idx].clone();
+                                before.transform.position = before_pos;
+                                let after = s.document[idx].clone();
+                                ChalkAction::Transform {
+                                    before,
+                                    after,
+                                    index: idx,
+                                }
+                            })
+                            .collect::<Vec<_>>();
+                        let action = if actions.len() == 1 {
+                            actions.into_iter().next().unwrap()
+                        } else {
+                            ChalkAction::Batch { actions }
+                        };
+                        s.history.apply(&mut s.document, action);
+                    }
+                    return;
+                }
             }
 
             if let Some(primitive) = s.end_drawing() {

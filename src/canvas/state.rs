@@ -7,6 +7,7 @@ use crate::{
         history::History,
         primitives::{
             Geometry, Primitive, PrimitiveStyle, ShapeInProgress, geometry::primitives_aabb,
+            handle::HandleKind,
         },
         styles::ChalkStyles,
         tool::Tool,
@@ -30,6 +31,13 @@ pub struct WhiteboardState {
     pub drag_start_transforms: HashMap<usize, Point>,
     /// World-space pointer position when the drag began.
     pub drag_start_world: Option<Point>,
+
+    /// If dragging a handle, which one and its initial state.
+    pub drag_handle: Option<HandleKind>,
+    /// The full AABB at the moment a handle drag began.
+    pub drag_handle_initial_aabb: Option<(f64, f64, f64, f64)>,
+    /// Per-primitive geometry snapshot at drag start, for proportional remap.
+    pub drag_handle_initial_geoms: Vec<(usize, Geometry, Point)>, // (idx, geom, transform_pos)
 
     /// Primitives drawn to the canvas
     pub document: Vec<Primitive>,
@@ -65,6 +73,10 @@ impl WhiteboardState {
             drag_start_transforms: HashMap::new(),
             drag_start_world: None,
 
+            drag_handle: None,
+            drag_handle_initial_aabb: None,
+            drag_handle_initial_geoms: Vec::new(),
+
             document: Vec::<Primitive>::new(),
 
             vt: ViewTransform::default(),
@@ -85,6 +97,9 @@ impl WhiteboardState {
         self.selected.clear();
         self.drag_start_transforms.clear();
         self.drag_start_world = None;
+        self.drag_handle = None;
+        self.drag_handle_initial_aabb = None;
+        self.drag_handle_initial_geoms.clear();
         self.tool = tool;
     }
 
@@ -366,6 +381,140 @@ impl WhiteboardState {
             && world.0 <= maxx + PAD
             && world.1 >= miny - PAD
             && world.1 <= maxy + PAD
+    }
+
+    /// Returns the handle kind and its world position if the point is within
+    /// hit radius of any handle.
+    pub fn hit_test_handle(&self, world: Point, zoom: f64) -> Option<HandleKind> {
+        let (minx, miny, maxx, maxy) = self.selection_bounds()?;
+        let hit_radius = 8.0 / zoom; // fixed screen-space radius
+        for &kind in HandleKind::ALL {
+            let (hx, hy) = kind.position(minx, miny, maxx, maxy);
+            let dx = world.0 - hx;
+            let dy = world.1 - hy;
+            if dx * dx + dy * dy <= hit_radius * hit_radius {
+                return Some(kind);
+            }
+        }
+        None
+    }
+
+    pub fn begin_handle_drag(&mut self, screen: Point) {
+        let world = self.vt.screen_to_world(screen.0, screen.1);
+        self.is_drawing = true;
+        self.drag_start_world = Some(world);
+        self.drag_handle_initial_aabb = self.selection_bounds();
+        self.drag_handle_initial_geoms = self
+            .selected
+            .iter()
+            .map(|&idx| {
+                (
+                    idx,
+                    self.document[idx].geometry.clone(),
+                    self.document[idx].transform.position,
+                )
+            })
+            .collect();
+    }
+
+    pub fn update_handle_drag(&mut self, screen: Point, snap: bool) {
+        let world = self.vt.screen_to_world(screen.0, screen.1);
+        let (Some(handle), Some(initial_aabb), Some(start_world)) = (
+            self.drag_handle,
+            self.drag_handle_initial_aabb,
+            self.drag_start_world,
+        ) else {
+            return;
+        };
+
+        let delta = (world.0 - start_world.0, world.1 - start_world.1);
+        let (mut minx, mut miny, mut maxx, mut maxy) = initial_aabb;
+
+        let (ax, min_ax, ay, min_ay) = handle.axes();
+        if ax {
+            if min_ax {
+                minx += delta.0;
+            } else {
+                maxx += delta.0;
+            }
+        }
+        if ay {
+            if min_ay {
+                miny += delta.1;
+            } else {
+                maxy += delta.1;
+            }
+        }
+
+        // Snap to square if shift held, using the larger axis delta.
+        if snap {
+            let dw = (maxx - minx) - (initial_aabb.2 - initial_aabb.0);
+            let dh = (maxy - miny) - (initial_aabb.3 - initial_aabb.1);
+            let d = if dw.abs() > dh.abs() { dw } else { dh };
+            let (ax, min_ax, ay, min_ay) = handle.axes();
+            if ax && ay {
+                let w = (initial_aabb.2 - initial_aabb.0) + d;
+                let h = (initial_aabb.3 - initial_aabb.1) + d;
+                if min_ax {
+                    minx = maxx - w;
+                } else {
+                    maxx = minx + w;
+                }
+                if min_ay {
+                    miny = maxy - h;
+                } else {
+                    maxy = miny + h;
+                }
+            }
+        }
+
+        // Prevent inversion — enforce minimum size.
+        let min_size = 1.0;
+        if maxx - minx < min_size {
+            maxx = minx + min_size;
+        }
+        if maxy - miny < min_size {
+            maxy = miny + min_size;
+        }
+
+        let new_aabb = (minx, miny, maxx, maxy);
+
+        for &(idx, ref geom, pos) in &self.drag_handle_initial_geoms {
+            // The initial geometry is stored without the transform offset,
+            // so shift the AABBs into geometry-local space.
+            let (tx, ty) = pos;
+            let local_initial = (
+                initial_aabb.0 - tx,
+                initial_aabb.1 - ty,
+                initial_aabb.2 - tx,
+                initial_aabb.3 - ty,
+            );
+            let local_new = (
+                new_aabb.0 - tx,
+                new_aabb.1 - ty,
+                new_aabb.2 - tx,
+                new_aabb.3 - ty,
+            );
+            self.document[idx].geometry = geom.remap_aabb(local_initial, local_new);
+        }
+    }
+
+    pub fn end_handle_drag(&mut self) -> Vec<(usize, Geometry, Point, Geometry, Point)> {
+        self.is_drawing = false;
+        self.drag_start_world = None;
+        self.drag_handle = None;
+        self.drag_handle_initial_aabb = None;
+
+        let mut result = Vec::new();
+        for (idx, before_geom, before_pos) in self.drag_handle_initial_geoms.drain(..) {
+            let after_geom = self.document[idx].geometry.clone();
+            let after_pos = self.document[idx].transform.position;
+            // Only record if something actually changed.
+            if after_geom != before_geom {
+                result.push((idx, before_geom, before_pos, after_geom, after_pos));
+            }
+        }
+        result
     }
 }
 
