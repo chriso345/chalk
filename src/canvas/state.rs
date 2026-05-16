@@ -47,6 +47,13 @@ pub struct WhiteboardState {
     /// Whether the user is currently drawing (pointer down).
     pub is_drawing: bool,
 
+    /// The selected primitives that are being transformed, if any.
+    pub selected: Option<usize>,
+    /// The world-space position of the primitive's transform when the drag began.
+    pub drag_start_transform: Option<Point>,
+    /// World-space pointer position when the drag began.
+    pub drag_start_world: Option<Point>,
+
     /// Primitives drawn to the canvas
     pub document: Vec<Primitive>,
 
@@ -77,6 +84,10 @@ impl WhiteboardState {
             active: None,
             is_drawing: false,
 
+            selected: None,
+            drag_start_transform: None,
+            drag_start_world: None,
+
             document: Vec::<Primitive>::new(),
 
             vt: ViewTransform::default(),
@@ -94,6 +105,9 @@ impl WhiteboardState {
         self.active = None;
         self.is_drawing = false;
         self.last_pan_pos = None;
+        self.selected = None;
+        self.drag_start_transform = None;
+        self.drag_start_world = None;
         self.tool = tool;
     }
 
@@ -206,4 +220,111 @@ impl WhiteboardState {
         let factor = target_zoom / self.vt.zoom;
         self.vt = self.vt.zoom_towards(center_x, center_y, factor, min, max);
     }
+
+    /// Returns the index of the topmost primitive hit by the given world point.
+    pub fn hit_test(&self, world: Point) -> Option<usize> {
+        for (i, prim) in self.document.iter().enumerate().rev() {
+            if primitive_hit(prim, world) {
+                return Some(i);
+            }
+        }
+        None
+    }
+
+    /// Begin a drag of the selected primitive.
+    pub fn begin_drag(&mut self, screen: Point) {
+        let world = self.vt.screen_to_world(screen.0, screen.1);
+        self.is_drawing = true;
+        if let Some(idx) = self.selected {
+            let current_pos = self.document[idx].transform.position;
+            self.drag_start_transform = Some(current_pos);
+            self.drag_start_world = Some(world);
+        }
+    }
+
+    /// Move the selected primitive while dragging. Does NOT record history.
+    pub fn update_drag(&mut self, screen: Point) {
+        let world = self.vt.screen_to_world(screen.0, screen.1);
+        if let (Some(idx), Some(start_world), Some(start_transform)) = (
+            self.selected,
+            self.drag_start_world,
+            self.drag_start_transform,
+        ) {
+            let delta = (world.0 - start_world.0, world.1 - start_world.1);
+            self.document[idx].transform.position =
+                (start_transform.0 + delta.0, start_transform.1 + delta.1);
+        }
+    }
+
+    /// Finish drag, commit to history. Returns (index, before, after) if a move happened.
+    pub fn end_drag(&mut self) -> Option<(usize, Point, Point)> {
+        self.is_drawing = false;
+        self.last_pan_pos = None;
+        if let (Some(idx), Some(start)) = (self.selected, self.drag_start_transform) {
+            let after = self.document[idx].transform.position;
+            self.drag_start_transform = None;
+            self.drag_start_world = None;
+            // Only record if the primitive actually moved.
+            if (after.0 - start.0).abs() > f64::EPSILON || (after.1 - start.1).abs() > f64::EPSILON
+            {
+                return Some((idx, start, after));
+            }
+        }
+        None
+    }
+}
+
+/// Axis-aligned bounding-box hit test for a primitive (in world space).
+/// The transform.position offset is accounted for.
+fn primitive_hit(prim: &Primitive, world: Point) -> bool {
+    let (wx, wy) = world;
+    let (tx, ty) = prim.transform.position;
+    // Undo the transform so we test in geometry-local space.
+    let (lx, ly) = (wx - tx, wy - ty);
+
+    const PAD: f64 = 8.0; // hit-test padding in world units
+
+    match &prim.geometry {
+        Geometry::Stroke(pts) => {
+            if pts.is_empty() {
+                return false;
+            }
+            pts.windows(2)
+                .any(|seg| point_to_segment_dist2(lx, ly, seg[0], seg[1]) < (PAD * PAD))
+        }
+        Geometry::Line { start, end } | Geometry::Arrow { start, end } => {
+            point_to_segment_dist2(lx, ly, *start, *end) < (PAD * PAD)
+        }
+        Geometry::Rect {
+            origin: (ox, oy),
+            size: (w, h),
+        } => lx >= ox - PAD && lx <= ox + w + PAD && ly >= oy - PAD && ly <= oy + h + PAD,
+        Geometry::Oval {
+            origin: (ox, oy),
+            size: (w, h),
+        } => {
+            let (rx, ry) = (w / 2.0, h / 2.0);
+            let (cx, cy) = (ox + rx, oy + ry);
+            if rx <= 0.0 || ry <= 0.0 {
+                return false;
+            }
+            let (nx, ny) = ((lx - cx) / (rx + PAD), (ly - cy) / (ry + PAD));
+            nx * nx + ny * ny <= 1.0
+        }
+        _ => false,
+    }
+}
+
+fn point_to_segment_dist2(px: f64, py: f64, (ax, ay): Point, (bx, by): Point) -> f64 {
+    let (dx, dy) = (bx - ax, by - ay);
+    let len2 = dx * dx + dy * dy;
+    if len2 == 0.0 {
+        let (ex, ey) = (px - ax, py - ay);
+        return ex * ex + ey * ey;
+    }
+    let t = ((px - ax) * dx + (py - ay) * dy) / len2;
+    let t = t.clamp(0.0, 1.0);
+    let (qx, qy) = (ax + t * dx, ay + t * dy);
+    let (ex, ey) = (px - qx, py - qy);
+    ex * ex + ey * ey
 }

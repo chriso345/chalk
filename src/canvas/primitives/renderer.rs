@@ -54,7 +54,7 @@ impl PrimitiveRenderer {
             }
             Geometry::Rect { origin, size } => Self::draw_rect(ctx, *origin, *size),
             Geometry::Oval { origin, size } => Self::draw_oval(ctx, *origin, *size),
-            Geometry::Polygon { points } => Self::draw_polygon(ctx, points),
+            _ => {}
         }
     }
 
@@ -155,10 +155,5 @@ impl PrimitiveRenderer {
         ctx.begin_path();
         ctx.ellipse(x + rx, y + ry, rx, ry, 0.0, 0.0, TAU).unwrap();
         ctx.stroke();
-    }
-
-    fn draw_polygon(ctx: &CanvasRenderingContext2d, points: &[(f64, f64)]) {
-        // Placeholder - Polygon is not yet implemented.
-        let _ = (ctx, points);
     }
 }

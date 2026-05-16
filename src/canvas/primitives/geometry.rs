@@ -22,10 +22,23 @@ pub enum Geometry {
         origin: Point,
         size: (f64, f64),
     },
-    /// Not yet implemented; placeholder for future polygon support.
+    // TODO: Add polygon support
     #[allow(dead_code)]
     Polygon {
         points: Vec<Point>,
+    },
+    // TODO: Add image support
+    #[allow(dead_code)]
+    Image {
+        origin: Point,
+        size: (f64, f64),
+        data_url: String,
+    },
+    // TODO: Add text support
+    #[allow(dead_code)]
+    Text {
+        origin: Point,
+        content: String,
     },
 }
 
@@ -33,7 +46,6 @@ impl Geometry {
     pub fn is_empty(&self) -> bool {
         match self {
             Geometry::Stroke(pts) => pts.is_empty(),
-            // Geometry::Polygon(pts) => pts.is_empty(),
             _ => false,
         }
     }

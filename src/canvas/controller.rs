@@ -48,8 +48,20 @@ impl WhiteboardController {
         };
         let _ = canvas.set_pointer_capture(e.pointer_id());
 
+        let screen = (e.client_x() as f64, e.client_y() as f64);
+        let is_middle = e.button() == 1;
+
         state.update(|s| {
-            s.begin_drawing((e.client_x() as f64, e.client_y() as f64), e.button() == 1)
+            if !is_middle && s.tool == Tool::Pointer {
+                // Hit-test in world space.
+                let world = s.vt.screen_to_world(screen.0, screen.1);
+                s.selected = s.hit_test(world);
+                if s.selected.is_some() {
+                    s.begin_drag(screen);
+                    return;
+                }
+            }
+            s.begin_drawing(screen, is_middle);
         });
     }
 
@@ -63,12 +75,16 @@ impl WhiteboardController {
         }
         e.prevent_default();
 
+        let screen = (e.client_x() as f64, e.client_y() as f64);
+        let is_middle = (e.buttons() & 4) != 0;
+
         state.update(|s| {
-            s.update_drawing(
-                (e.client_x() as f64, e.client_y() as f64),
-                e.shift_key(),
-                (e.buttons() & 4) != 0,
-            )
+            // If dragging a selected primitive, use update_drag instead.
+            if s.tool == Tool::Pointer && s.selected.is_some() && !is_middle {
+                s.update_drag(screen);
+            } else {
+                s.update_drawing(screen, e.shift_key(), is_middle);
+            }
         });
 
         let Some(canvas) = canvas_ref.get() else {
@@ -83,6 +99,25 @@ impl WhiteboardController {
         signals: ChalkSignals,
     ) {
         state.update(|s| {
+            if s.tool == Tool::Pointer && s.selected.is_some() {
+                // Commit drag to history if the primitive moved.
+                if let Some((idx, before_pos, _)) = s.end_drag() {
+                    // Reconstruct before/after Primitives for the history entry.
+                    let mut before = s.document[idx].clone();
+                    before.transform.position = before_pos;
+                    let after = s.document[idx].clone(); // already has after_pos applied
+                    s.history.apply(
+                        &mut s.document,
+                        ChalkAction::Transform {
+                            before,
+                            after,
+                            index: idx,
+                        },
+                    );
+                }
+                return;
+            }
+
             if let Some(primitive) = s.end_drawing() {
                 s.history
                     .apply(&mut s.document, ChalkAction::Add { primitive });
