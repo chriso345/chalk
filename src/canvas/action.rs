@@ -10,7 +10,6 @@ pub enum ChalkAction {
         primitive: Primitive,
         index: usize,
     },
-    // TODO: Not Implemented: Event for moving and resizing shape(s)
     Transform {
         before: Primitive,
         after: Primitive,
@@ -18,5 +17,8 @@ pub enum ChalkAction {
     },
     Clear {
         previous: Vec<Primitive>,
+    },
+    Batch {
+        actions: Vec<ChalkAction>,
     },
 }

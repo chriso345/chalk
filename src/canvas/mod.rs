@@ -1,5 +1,6 @@
 pub mod action;
 pub mod controller;
+pub mod drawing;
 pub mod history;
 pub mod renderer;
 pub mod state;

@@ -50,13 +50,13 @@ impl WhiteboardController {
 
         let screen = (e.client_x() as f64, e.client_y() as f64);
         let is_middle = e.button() == 1;
+        let ctrl = e.ctrl_key();
 
         state.update(|s| {
             if !is_middle && s.tool == Tool::Pointer {
-                // Hit-test in world space.
                 let world = s.vt.screen_to_world(screen.0, screen.1);
-                s.selected = s.hit_test(world);
-                if s.selected.is_some() {
+                let has_selection = s.apply_selection(world, ctrl);
+                if has_selection {
                     s.begin_drag(screen);
                     return;
                 }
@@ -79,8 +79,7 @@ impl WhiteboardController {
         let is_middle = (e.buttons() & 4) != 0;
 
         state.update(|s| {
-            // If dragging a selected primitive, use update_drag instead.
-            if s.tool == Tool::Pointer && s.selected.is_some() && !is_middle {
+            if s.tool == Tool::Pointer && !s.selected.is_empty() && !is_middle {
                 s.update_drag(screen);
             } else {
                 s.update_drawing(screen, e.shift_key(), is_middle);
@@ -99,21 +98,29 @@ impl WhiteboardController {
         signals: ChalkSignals,
     ) {
         state.update(|s| {
-            if s.tool == Tool::Pointer && s.selected.is_some() {
-                // Commit drag to history if the primitive moved.
-                if let Some((idx, before_pos, _)) = s.end_drag() {
-                    // Reconstruct before/after Primitives for the history entry.
-                    let mut before = s.document[idx].clone();
-                    before.transform.position = before_pos;
-                    let after = s.document[idx].clone(); // already has after_pos applied
-                    s.history.apply(
-                        &mut s.document,
-                        ChalkAction::Transform {
-                            before,
-                            after,
-                            index: idx,
-                        },
-                    );
+            if s.tool == Tool::Pointer && !s.selected.is_empty() {
+                let moves = s.end_drag();
+                if !moves.is_empty() {
+                    let actions = moves
+                        .into_iter()
+                        .map(|(idx, before_pos, _after_pos)| {
+                            let mut before = s.document[idx].clone();
+                            before.transform.position = before_pos;
+                            let after = s.document[idx].clone();
+                            ChalkAction::Transform {
+                                before,
+                                after,
+                                index: idx,
+                            }
+                        })
+                        .collect::<Vec<_>>();
+
+                    let action = if actions.len() == 1 {
+                        actions.into_iter().next().unwrap()
+                    } else {
+                        ChalkAction::Batch { actions }
+                    };
+                    s.history.apply(&mut s.document, action);
                 }
                 return;
             }

@@ -32,6 +32,11 @@ impl History {
             ChalkAction::Clear { .. } => {
                 doc.clear();
             }
+            ChalkAction::Batch { actions } => {
+                for action in actions {
+                    self.apply_action(doc, action);
+                }
+            }
         }
     }
 
@@ -59,6 +64,11 @@ impl History {
             ChalkAction::Clear { previous } => {
                 *doc = previous.clone();
             }
+            ChalkAction::Batch { actions } => {
+                for a in actions.iter().rev() {
+                    self.undo_action(doc, a);
+                }
+            }
         }
     }
 
@@ -79,5 +89,11 @@ impl History {
                 previous: doc.clone(),
             },
         );
+    }
+
+    pub fn push_without_apply(&mut self, action: ChalkAction) {
+        self.actions.truncate(self.cursor);
+        self.actions.push(action);
+        self.cursor += 1;
     }
 }

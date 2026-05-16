@@ -1,42 +1,19 @@
+use std::collections::{HashMap, HashSet};
+
 use crate::{
     canvas::{
+        action::ChalkAction,
+        drawing::ActiveDrawing,
         history::History,
-        primitives::{Geometry, Primitive, PrimitiveStyle, ShapeInProgress},
+        primitives::{
+            Geometry, Primitive, PrimitiveStyle, ShapeInProgress, geometry::primitives_aabb,
+        },
         styles::ChalkStyles,
         tool::Tool,
         types::{Point, ViewTransform},
     },
     ui::color::ChalkColor,
 };
-
-/// What the user is currently drawing. Cleared on pointer-up.
-#[derive(Clone, Debug)]
-pub enum ActiveDrawing {
-    Stroke(Vec<Point>),
-    Shape(ShapeInProgress),
-}
-
-impl ActiveDrawing {
-    /// Preview as primitives for rendering. Style is provided externally.
-    pub fn preview(&self, style: &PrimitiveStyle) -> Option<Vec<Primitive>> {
-        let geom = match self {
-            ActiveDrawing::Stroke(pts) if pts.is_empty() => return None,
-            ActiveDrawing::Stroke(pts) => Geometry::Stroke(pts.clone()),
-            ActiveDrawing::Shape(s) => Geometry::from(s.build()),
-        };
-        Some(vec![Primitive::new(geom, style.clone())])
-    }
-
-    /// Consume into a committed `Primitive`, stamping the provided style.
-    pub fn into_primitive(self, style: PrimitiveStyle) -> Option<Primitive> {
-        let geom = match self {
-            ActiveDrawing::Stroke(pts) if pts.is_empty() => return None,
-            ActiveDrawing::Stroke(pts) => Geometry::Stroke(pts),
-            ActiveDrawing::Shape(s) => s.build(),
-        };
-        Some(Primitive::new(geom, style))
-    }
-}
 
 /// The entire state of the whiteboard.
 pub struct WhiteboardState {
@@ -48,9 +25,9 @@ pub struct WhiteboardState {
     pub is_drawing: bool,
 
     /// The selected primitives that are being transformed, if any.
-    pub selected: Option<usize>,
-    /// The world-space position of the primitive's transform when the drag began.
-    pub drag_start_transform: Option<Point>,
+    pub selected: HashSet<usize>,
+    /// The world-space position of the primitive's transforms when the drag began.
+    pub drag_start_transforms: HashMap<usize, Point>,
     /// World-space pointer position when the drag began.
     pub drag_start_world: Option<Point>,
 
@@ -84,8 +61,8 @@ impl WhiteboardState {
             active: None,
             is_drawing: false,
 
-            selected: None,
-            drag_start_transform: None,
+            selected: HashSet::new(),
+            drag_start_transforms: HashMap::new(),
             drag_start_world: None,
 
             document: Vec::<Primitive>::new(),
@@ -105,18 +82,94 @@ impl WhiteboardState {
         self.active = None;
         self.is_drawing = false;
         self.last_pan_pos = None;
-        self.selected = None;
-        self.drag_start_transform = None;
+        self.selected.clear();
+        self.drag_start_transforms.clear();
         self.drag_start_world = None;
         self.tool = tool;
     }
 
     pub fn set_stroke_color(&mut self, color: ChalkColor) {
-        self.current_style.stroke_color = Some(color.to_hex().to_string());
+        let hex = color.to_hex().to_string();
+        self.current_style.stroke_color = Some(hex.clone());
+
+        if self.selected.is_empty() {
+            return;
+        }
+
+        let actions: Vec<ChalkAction> = self
+            .selected
+            .iter()
+            .filter(|&&idx| self.document[idx].style.stroke_color.is_some())
+            .map(|&idx| {
+                let before = self.document[idx].clone();
+                let mut after = before.clone();
+                after.style.stroke_color = Some(hex.clone());
+                ChalkAction::Transform {
+                    before,
+                    after,
+                    index: idx,
+                }
+            })
+            .collect();
+
+        for action in &actions {
+            if let ChalkAction::Transform { index, after, .. } = action {
+                self.document[*index] = after.clone();
+            }
+        }
+
+        if actions.is_empty() {
+            return;
+        }
+
+        let action = if actions.len() == 1 {
+            actions.into_iter().next().unwrap()
+        } else {
+            ChalkAction::Batch { actions }
+        };
+
+        self.history.push_without_apply(action);
     }
 
     pub fn set_stroke_width(&mut self, width: f64) {
         self.current_style.stroke_width = width;
+
+        if self.selected.is_empty() {
+            return;
+        }
+
+        let actions: Vec<ChalkAction> = self
+            .selected
+            .iter()
+            .map(|&idx| {
+                let before = self.document[idx].clone();
+                let mut after = before.clone();
+                after.style.stroke_width = width;
+                ChalkAction::Transform {
+                    before,
+                    after,
+                    index: idx,
+                }
+            })
+            .collect();
+
+        for action in &actions {
+            if let ChalkAction::Transform { index, after, .. } = action {
+                self.document[*index] = after.clone();
+            }
+        }
+
+        if actions.is_empty() {
+            return;
+        }
+
+        let action = if actions.len() == 1 {
+            actions.into_iter().next().unwrap()
+        } else {
+            ChalkAction::Batch { actions }
+        };
+
+        self.history.push_without_apply(action);
     }
 
     pub fn begin_drawing(&mut self, screen: Point, is_middle_mouse: bool) {
@@ -235,42 +288,84 @@ impl WhiteboardState {
     pub fn begin_drag(&mut self, screen: Point) {
         let world = self.vt.screen_to_world(screen.0, screen.1);
         self.is_drawing = true;
-        if let Some(idx) = self.selected {
-            let current_pos = self.document[idx].transform.position;
-            self.drag_start_transform = Some(current_pos);
-            self.drag_start_world = Some(world);
-        }
+        self.drag_start_world = Some(world);
+        self.drag_start_transforms = self
+            .selected
+            .iter()
+            .map(|&idx| (idx, self.document[idx].transform.position))
+            .collect();
     }
 
     /// Move the selected primitive while dragging. Does NOT record history.
     pub fn update_drag(&mut self, screen: Point) {
         let world = self.vt.screen_to_world(screen.0, screen.1);
-        if let (Some(idx), Some(start_world), Some(start_transform)) = (
-            self.selected,
-            self.drag_start_world,
-            self.drag_start_transform,
-        ) {
+        if let Some(start_world) = self.drag_start_world {
             let delta = (world.0 - start_world.0, world.1 - start_world.1);
-            self.document[idx].transform.position =
-                (start_transform.0 + delta.0, start_transform.1 + delta.1);
+            for (&idx, &start_pos) in &self.drag_start_transforms {
+                self.document[idx].transform.position =
+                    (start_pos.0 + delta.0, start_pos.1 + delta.1);
+            }
         }
     }
 
     /// Finish drag, commit to history. Returns (index, before, after) if a move happened.
-    pub fn end_drag(&mut self) -> Option<(usize, Point, Point)> {
+    pub fn end_drag(&mut self) -> Vec<(usize, Point, Point)> {
         self.is_drawing = false;
         self.last_pan_pos = None;
-        if let (Some(idx), Some(start)) = (self.selected, self.drag_start_transform) {
+        let mut moves = Vec::new();
+        for (&idx, &start_pos) in &self.drag_start_transforms {
             let after = self.document[idx].transform.position;
-            self.drag_start_transform = None;
-            self.drag_start_world = None;
-            // Only record if the primitive actually moved.
-            if (after.0 - start.0).abs() > f64::EPSILON || (after.1 - start.1).abs() > f64::EPSILON
+            if (after.0 - start_pos.0).abs() > f64::EPSILON
+                || (after.1 - start_pos.1).abs() > f64::EPSILON
             {
-                return Some((idx, start, after));
+                moves.push((idx, start_pos, after));
             }
         }
-        None
+        self.drag_start_transforms.clear();
+        self.drag_start_world = None;
+        moves
+    }
+
+    pub fn apply_selection(&mut self, world: Point, ctrl: bool) -> bool {
+        let hit = self.hit_test(world);
+        if ctrl {
+            match hit {
+                Some(idx) => {
+                    if self.selected.contains(&idx) {
+                        self.selected.remove(&idx);
+                    } else {
+                        self.selected.insert(idx);
+                    }
+                }
+                None => {}
+            }
+        } else {
+            let inside_selection = hit.map_or(false, |idx| self.selected.contains(&idx))
+                || self.point_in_selection_bounds(world); // CHANGED
+            if !inside_selection {
+                self.selected.clear();
+                if let Some(idx) = hit {
+                    self.selected.insert(idx);
+                }
+            }
+        }
+        !self.selected.is_empty()
+    }
+
+    fn selection_bounds(&self) -> Option<(f64, f64, f64, f64)> {
+        let prims = self.selected.iter().map(|&i| &self.document[i]);
+        primitives_aabb(prims)
+    }
+
+    fn point_in_selection_bounds(&self, world: Point) -> bool {
+        let Some((minx, miny, maxx, maxy)) = self.selection_bounds() else {
+            return false;
+        };
+        const PAD: f64 = 6.0; // match the visual padding in the renderer
+        world.0 >= minx - PAD
+            && world.0 <= maxx + PAD
+            && world.1 >= miny - PAD
+            && world.1 <= maxy + PAD
     }
 }
 
