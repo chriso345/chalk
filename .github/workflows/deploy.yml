@@ -24,10 +24,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: wasm32-unknown-unknown
+      - name: Add wasm target
+        run: rustup target add wasm32-unknown-unknown
 
       - name: Install trunk
         uses: jetli/trunk-action@v0.5.0
