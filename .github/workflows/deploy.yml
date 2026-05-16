@@ -31,7 +31,7 @@ jobs:
           version: latest
 
       - name: Build
-        run: trunk build --release --public-url /
+        run: trunk build --release --public-url /chalk/
 
       - name: Deploy to /chalk subdirectory
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
@@ -39,5 +39,5 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dist
-          destination_dir: chalk
+          # destination_dir: chalk
           keep_files: true
