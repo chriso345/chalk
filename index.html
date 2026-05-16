@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Language" content="en" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chalk</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  
+<script type="module">
+import init, * as bindings from '/chalk/chalk-a96e22380a7af651.js';
+const wasm = await init({ module_or_path: '/chalk/chalk-a96e22380a7af651_bg.wasm' });
+
+
+window.wasmBindings = bindings;
+
+
+dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
+
+</script>
+  
+<link rel="modulepreload" href="/chalk/chalk-a96e22380a7af651.js" crossorigin="anonymous" integrity="sha384-SGktC5xIDtcpwY7zhFjcv5GFD+2tkqE5tlGYJOCNmiQ78D1lpkGo0+8YbZax6nU0"><link rel="preload" href="/chalk/chalk-a96e22380a7af651_bg.wasm" crossorigin="anonymous" integrity="sha384-Hwu++CFppVnOUW5MyBwi/lKF6dg9LQWwbmDvnYTm6pJlmnaVTELijvtYn+DcMlZN" as="fetch" type="application/wasm"></head>
+</html>
