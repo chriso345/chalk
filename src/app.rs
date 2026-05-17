@@ -29,6 +29,7 @@ pub fn App() -> impl IntoView {
             "action:undo" => signals.undo.update(|n| *n += 1),
             "action:redo" => signals.redo.update(|n| *n += 1),
             "action:clear" => signals.clear.update(|n| *n += 1),
+            "action:delete-selection" => signals.delete_selection.update(|n| *n += 1),
 
             "action:reset-zoom" => signals.zoom.set(100),
             "action:zoom-in" => signals.zoom.update(|n| *n = (*n + 10).min(3000)),

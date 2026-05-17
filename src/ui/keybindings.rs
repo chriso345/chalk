@@ -67,6 +67,9 @@ static KEYBINDINGS: &[Keybinding] = &[
     Keybinding::ctrl("=", "action:zoom-in"),
     Keybinding::ctrl("-", "action:zoom-out"),
     Keybinding::ctrl("0", "action:reset-zoom"),
+    // Delete Selection
+    Keybinding::simple("Delete", "action:delete-selection"),
+    Keybinding::simple("Backspace", "action:delete-selection"),
 ];
 
 /// Register a global `keydown` listener that fires `on_action` for any

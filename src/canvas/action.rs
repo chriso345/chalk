@@ -5,7 +5,6 @@ pub enum ChalkAction {
     Add {
         primitive: Primitive,
     },
-    // TODO: Not Implemented: Event for individial shape removal
     Delete {
         primitive: Primitive,
         index: usize,

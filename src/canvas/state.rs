@@ -265,6 +265,32 @@ impl WhiteboardState {
         self.active = None;
     }
 
+    pub fn delete_selected(&mut self) {
+        if self.selected.is_empty() {
+            return;
+        }
+
+        let mut indices: Vec<usize> = self.selected.iter().copied().collect();
+        indices.sort_unstable_by(|a, b| b.cmp(a));
+
+        let actions: Vec<ChalkAction> = indices
+            .iter()
+            .map(|&idx| ChalkAction::Delete {
+                primitive: self.document[idx].clone(),
+                index: idx,
+            })
+            .collect();
+
+        let action = if actions.len() == 1 {
+            actions.into_iter().next().unwrap()
+        } else {
+            ChalkAction::Batch { actions }
+        };
+
+        self.history.apply(&mut self.document, action);
+        self.selected.clear();
+    }
+
     pub fn change_theme(&mut self, to_light: bool) {
         self.style = if to_light {
             ChalkStyles::light()

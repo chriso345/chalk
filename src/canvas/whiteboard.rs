@@ -47,6 +47,15 @@ pub fn Whiteboard(signals: ChalkSignals) -> impl IntoView {
     Effect::new({
         let repaint = repaint.clone();
         move |_| {
+            let _ = signals.delete_selection.get();
+            state.update(|s| s.delete_selected());
+            repaint();
+        }
+    });
+
+    Effect::new({
+        let repaint = repaint.clone();
+        move |_| {
             let _ = signals.undo.get();
             state.update(|s| s.undo());
             repaint();
