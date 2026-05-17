@@ -5,7 +5,7 @@ use leptos::reactive::traits::Get;
 use crate::{
     icon,
     ui::{
-        layout::{Anchor, BoxConfig, Direction, Label, PanelConfig},
+        layout::{Activation, Anchor, BoxConfig, Direction, Label, PanelConfig},
         overlay::OverlayContext,
     },
 };
@@ -182,10 +182,40 @@ fn dark_toggle() -> PanelConfig {
         .direction(Direction::Row)
         .gap(0)
         .padding(6)
+        .add(BoxConfig::icon_dropdown(
+            Activation::Click,
+            "background-dropdown",
+            "background-dropdown-icon",
+            icon!("background.svg"),
+            background_dropdown_items(),
+        ))
         .add(BoxConfig::icon_button(
             "toggle-dark-mode",
             "toggle-dark-mode-icon",
             icon!("moon.svg"),
             "action:toggle-dark-mode",
         ))
+}
+
+fn background_dropdown_items() -> Vec<BoxConfig> {
+    vec![
+        BoxConfig::icon_button(
+            "set-canvas-dots",
+            "set-canvas-dots-icon",
+            icon!("grain.svg"),
+            "action:set-canvas-dots",
+        ),
+        BoxConfig::icon_button(
+            "set-canvas-grid",
+            "set-canvas-grid-icon",
+            icon!("grid.svg"),
+            "action:set-canvas-grid",
+        ),
+        BoxConfig::icon_button(
+            "set-canvas-none",
+            "set-canvas-none-icon",
+            icon!("none.svg"),
+            "action:set-canvas-none",
+        ),
+    ]
 }

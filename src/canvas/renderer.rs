@@ -2,6 +2,7 @@ use wasm_bindgen::JsCast;
 use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement, js_sys};
 
 use crate::canvas::{
+    background::BackgroundKind,
     primitives::{
         Primitive, geometry::primitives_aabb, handle::HandleKind, renderer::PrimitiveRenderer,
     },
@@ -19,6 +20,10 @@ impl WhiteboardRenderer {
 
         ctx.set_fill_style_str(state.style.get_bg());
         ctx.fill_rect(0.0, 0.0, w, h);
+
+        if state.background_pattern != BackgroundKind::None {
+            state.background_pattern.draw(&ctx, canvas, state);
+        }
 
         ctx.save();
         ctx.translate(state.vt.offset_x, state.vt.offset_y).unwrap();

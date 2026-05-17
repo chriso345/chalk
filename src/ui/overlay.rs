@@ -2,9 +2,13 @@ use leptos::prelude::*;
 
 use crate::signals::ChalkSignals;
 use crate::ui::components::button::Button;
+use crate::ui::components::dropdown::Dropdown;
 use crate::ui::components::hint::Hint;
 use crate::ui::components::image::Image;
 use crate::ui::layout::{BoxConfig, BoxKind, Direction, Label, PanelConfig};
+
+use crate::canvas::primitives::ShapeKind;
+use crate::canvas::tool::Tool;
 
 /// Props passed into the overlay alongside the layout config.
 #[derive(Clone)]
@@ -63,10 +67,7 @@ fn render_panel(panel: PanelConfig, ctx: StoredValue<OverlayContext>) -> impl In
     }
 }
 
-use crate::canvas::primitives::ShapeKind;
-use crate::canvas::tool::Tool;
-
-fn render_box(
+pub fn render_box(
     config: BoxConfig,
     ctx: StoredValue<OverlayContext>,
     direction: Direction,
@@ -252,5 +253,19 @@ fn render_box(
             }
             .into_any()
         }
+
+        BoxKind::Dropdown {
+            activation,
+            src,
+            items,
+        } => view! {
+            <Dropdown
+                activation=activation
+                src=src.to_string()
+                items=items
+                ctx=ctx
+            />
+        }
+        .into_any(),
     }
 }

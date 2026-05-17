@@ -3,6 +3,7 @@ use std::collections::{HashMap, HashSet};
 use crate::{
     canvas::{
         action::ChalkAction,
+        background::BackgroundKind,
         drawing::ActiveDrawing,
         history::History,
         primitives::{
@@ -54,6 +55,9 @@ pub struct WhiteboardState {
     /// Screen-space position of the last pointer event, used by Pan to
     /// compute deltas.
     pub last_pan_pos: Option<Point>,
+
+    /// Does the background show dotted grid
+    pub background_pattern: BackgroundKind,
 }
 
 impl Default for WhiteboardState {
@@ -86,6 +90,8 @@ impl WhiteboardState {
             current_style: PrimitiveStyle::new("#FF0000", 2.0),
 
             last_pan_pos: None,
+
+            background_pattern: BackgroundKind::None,
         }
     }
 
@@ -101,6 +107,10 @@ impl WhiteboardState {
         self.drag_handle_initial_aabb = None;
         self.drag_handle_initial_geoms.clear();
         self.tool = tool;
+    }
+
+    pub fn set_background_pattern(&mut self, pattern: BackgroundKind) {
+        self.background_pattern = pattern;
     }
 
     pub fn set_stroke_color(&mut self, color: ChalkColor) {
@@ -292,11 +302,11 @@ impl WhiteboardState {
     }
 
     pub fn change_theme(&mut self, to_light: bool) {
-        self.style = if to_light {
-            ChalkStyles::light()
-        } else {
-            ChalkStyles::dark()
+        if (to_light && self.style.is_light()) || (!to_light && self.style.is_dark()) {
+            return;
         }
+
+        self.style.toggle();
     }
 
     pub fn set_zoom_centered(

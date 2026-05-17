@@ -1,4 +1,5 @@
 pub mod action;
+pub mod background;
 pub mod controller;
 pub mod drawing;
 pub mod history;

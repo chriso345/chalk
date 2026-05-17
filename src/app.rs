@@ -1,5 +1,6 @@
 use leptos::prelude::*;
 
+use crate::canvas::background::BackgroundKind;
 use crate::canvas::{primitives::ShapeKind, tool::Tool, whiteboard::Whiteboard};
 use crate::signals::ChalkSignals;
 use crate::ui::blocks::build_layout;
@@ -52,6 +53,12 @@ pub fn App() -> impl IntoView {
                 if let Ok(width) = width {
                     signals.stroke_width.set(width);
                 }
+            }
+
+            action if action.starts_with("action:set-canvas-") => {
+                let background = action.trim_start_matches("action:set-canvas-");
+                let bg_kind = BackgroundKind::from_name(background);
+                signals.background.set(bg_kind);
             }
 
             _ => {

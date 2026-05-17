@@ -1,6 +1,9 @@
 use leptos::prelude::*;
 
-use crate::{canvas::tool::Tool, ui::color::ChalkColor};
+use crate::{
+    canvas::{background::BackgroundKind, tool::Tool},
+    ui::color::ChalkColor,
+};
 
 #[derive(Clone, Debug, Copy)]
 pub struct ChalkSignals {
@@ -12,6 +15,7 @@ pub struct ChalkSignals {
     pub delete_selection: SignalPair<u32>,
 
     pub dark_mode: SignalPair<bool>,
+    pub background: SignalPair<BackgroundKind>,
 
     pub lock_tool: SignalPair<bool>,
     pub tool: SignalPair<Tool>,
@@ -32,6 +36,7 @@ impl ChalkSignals {
             delete_selection: SignalPair::new(0_u32),
 
             dark_mode: SignalPair::new(true),
+            background: SignalPair::new(BackgroundKind::None),
 
             lock_tool: SignalPair::new(false),
             tool: SignalPair::new(Tool::default()),

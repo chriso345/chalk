@@ -101,6 +101,15 @@ pub fn Whiteboard(signals: ChalkSignals) -> impl IntoView {
     Effect::new({
         let repaint = repaint.clone();
         move |_| {
+            let _ = signals.background.get();
+            state.update(|s| s.set_background_pattern(signals.background.get()));
+            repaint();
+        }
+    });
+
+    Effect::new({
+        let repaint = repaint.clone();
+        move |_| {
             let tool = signals.tool.get();
             state.update(|s| s.set_tool(tool));
             repaint();

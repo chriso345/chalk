@@ -40,6 +40,12 @@ impl fmt::Debug for Label {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Activation {
+    Click,
+    Hover,
+}
+
 /// A single UI element inside a panel.
 #[derive(Clone, Debug)]
 pub struct BoxConfig {
@@ -79,6 +85,12 @@ pub enum BoxKind {
     StrokeWidth {
         width: u32,
         action: &'static str,
+    },
+    /// Dropdown group - hovering or clicking the parent box reveals the children.
+    Dropdown {
+        activation: Activation,
+        src: &'static str,
+        items: Vec<BoxConfig>,
     },
 }
 
@@ -215,6 +227,32 @@ impl BoxConfig {
     pub fn with_hint(&mut self, hint: &'static str) -> Self {
         self.hint = Some(hint);
         self.clone()
+    }
+
+    pub fn icon_dropdown(
+        activation: Activation,
+        id: &'static str,
+        icon_id: &'static str,
+        src: &'static str,
+        items: Vec<BoxConfig>,
+    ) -> Self {
+        Self {
+            id,
+            label: None,
+            hint: None,
+            kind: BoxKind::Dropdown {
+                activation,
+                src,
+                items,
+            },
+            children: Some(vec![BoxConfig {
+                id: icon_id,
+                label: None,
+                hint: None,
+                kind: BoxKind::Image { src },
+                children: None,
+            }]),
+        }
     }
 }
 
