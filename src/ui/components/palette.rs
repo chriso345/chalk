@@ -45,6 +45,8 @@ static PALETTE_ITEMS: &[PaletteItem] = &[
     PaletteItem::new("Clear", "Action", "action:clear", None),
     PaletteItem::new("Reset Zoom", "Action", "action:reset-zoom", Some("Ctrl+0")),
     PaletteItem::new("Toggle Theme", "Action", "action:toggle-dark-mode", None),
+    // Generation
+    PaletteItem::new("Generate", "", "ui:open-generation-palette", None),
 ];
 
 #[component]

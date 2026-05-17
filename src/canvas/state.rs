@@ -7,8 +7,8 @@ use crate::{
         drawing::ActiveDrawing,
         history::History,
         primitives::{
-            Geometry, Primitive, PrimitiveStyle, ShapeInProgress, geometry::primitives_aabb,
-            handle::HandleKind,
+            Geometry, Primitive, PrimitiveStyle, ShapeInProgress, collections::Collection,
+            geometry::primitives_aabb, handle::HandleKind,
         },
         styles::ChalkStyles,
         tool::Tool,
@@ -551,6 +551,40 @@ impl WhiteboardState {
             }
         }
         result
+    }
+
+    pub fn stamp_collection(&mut self, collection: Collection) {
+        let primitives = collection.generate();
+
+        if primitives.is_empty() {
+            return;
+        }
+
+        let start_idx = self.document.len(); // first new index
+
+        let actions: Vec<ChalkAction> = primitives
+            .into_iter()
+            .map(|prim| ChalkAction::Add { primitive: prim })
+            .collect();
+
+        let action = if actions.len() == 1 {
+            actions.into_iter().next().unwrap()
+        } else {
+            ChalkAction::Batch { actions }
+        };
+
+        self.history.apply(&mut self.document, action);
+
+        // Select everything that was just stamped
+        self.selected.clear();
+        for idx in start_idx..self.document.len() {
+            self.selected.insert(idx);
+        }
+    }
+
+    // Debug
+    pub fn perform_debug_action(&mut self) {
+        leptos::logging::log!("Debug action performed");
     }
 }
 

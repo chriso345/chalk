@@ -21,3 +21,15 @@ pub enum ChalkAction {
         actions: Vec<ChalkAction>,
     },
 }
+
+impl ChalkAction {
+    pub fn len(&self) -> usize {
+        match self {
+            ChalkAction::Add { .. }
+            | ChalkAction::Delete { .. }
+            | ChalkAction::Transform { .. } => 1,
+            ChalkAction::Clear { previous } => previous.len(),
+            ChalkAction::Batch { actions } => actions.iter().map(|a| a.len()).sum(),
+        }
+    }
+}

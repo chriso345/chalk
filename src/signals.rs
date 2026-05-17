@@ -1,7 +1,7 @@
 use leptos::prelude::*;
 
 use crate::{
-    canvas::{background::BackgroundKind, tool::Tool},
+    canvas::{background::BackgroundKind, primitives::collections::Collection, tool::Tool},
     ui::color::ChalkColor,
 };
 
@@ -23,6 +23,10 @@ pub struct ChalkSignals {
 
     pub color: SignalPair<ChalkColor>,
     pub stroke_width: SignalPair<f64>,
+
+    pub collection: SignalPair<Collection>,
+
+    pub debug: SignalPair<u32>,
 }
 
 impl ChalkSignals {
@@ -44,6 +48,10 @@ impl ChalkSignals {
 
             color: SignalPair::new(ChalkColor::new()),
             stroke_width: SignalPair::new(4_f64),
+
+            collection: SignalPair::new(Collection::Other),
+
+            debug: SignalPair::new(0_u32),
         }
     }
 }

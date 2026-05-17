@@ -1,6 +1,8 @@
 pub mod box_component;
 pub mod button;
+pub mod config_popup;
 pub mod dropdown;
+pub mod generation;
 pub mod hint;
 pub mod image;
 pub mod palette;

@@ -1,10 +1,12 @@
 use leptos::prelude::*;
 
 use crate::canvas::background::BackgroundKind;
+use crate::canvas::primitives::collections::Collection;
 use crate::canvas::{primitives::ShapeKind, tool::Tool, whiteboard::Whiteboard};
 use crate::signals::ChalkSignals;
 use crate::ui::blocks::build_layout;
 use crate::ui::color::ChalkColor;
+use crate::ui::components::generation::GenerationFlow;
 use crate::ui::components::palette::Palette;
 use crate::ui::keybindings;
 use crate::ui::overlay::{Overlay, OverlayContext};
@@ -16,6 +18,8 @@ pub fn App() -> impl IntoView {
 
     let signals = ChalkSignals::new();
 
+    let generation_palette_open = RwSignal::new(false);
+    let generation_palette_open_cb = generation_palette_open.clone();
     let on_action = Callback::new(move |action: &'static str| {
         // TODO: Change action to a proper action type (this can then be stored in history for undo/redo)
         match action {
@@ -39,6 +43,7 @@ pub fn App() -> impl IntoView {
             "action:lock-tool" => signals.lock_tool.update(|b| *b = !*b),
             "action:toggle-dark-mode" => signals.dark_mode.update(|b| *b = !*b),
             "ui:open-palette" => signals.palette_open.update(|v| *v = !*v),
+            "ui:open-generation-palette" => generation_palette_open_cb.update(|v| *v = !*v),
 
             action if action.starts_with("action:set-color-") => {
                 let color = action.trim_start_matches("action:set-color-");
@@ -61,6 +66,7 @@ pub fn App() -> impl IntoView {
                 signals.background.set(bg_kind);
             }
 
+            "debug:perform-action" => signals.debug.update(|n| *n += 1),
             _ => {
                 leptos::logging::log!("Unknown action: {action}");
             }
@@ -74,13 +80,23 @@ pub fn App() -> impl IntoView {
         }
     });
 
-    let ctx = OverlayContext { signals, on_action };
+    let ctx = OverlayContext {
+        signals,
+        on_action: on_action.clone(),
+    };
     let panels = build_layout();
 
     view! {
         <Whiteboard signals=signals />
         <Overlay panels=panels ctx=ctx />
 
-        <Palette open=signals.palette_open on_action=on_action />
+        <Palette open=signals.palette_open on_action=on_action.clone() />
+        <GenerationFlow
+            open=generation_palette_open
+            on_commit=Callback::new(move |collection: Collection| {
+                leptos::logging::log!("Committing collection: {collection:?}");
+                signals.collection.set(collection);
+            })
+        />
     }
 }

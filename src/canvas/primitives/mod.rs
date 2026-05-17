@@ -5,6 +5,8 @@ pub mod shape;
 pub mod style;
 pub mod transform;
 
+pub mod collections;
+
 pub use geometry::Geometry;
 pub use shape::{ShapeInProgress, ShapeKind};
 pub use style::PrimitiveStyle;

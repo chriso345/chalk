@@ -146,6 +146,24 @@ pub fn Whiteboard(signals: ChalkSignals) -> impl IntoView {
         }
     });
 
+    Effect::new({
+        let repaint = repaint.clone();
+        move |_| {
+            let _ = signals.collection.get();
+            state.update(|s| s.stamp_collection(signals.collection.get()));
+            repaint();
+        }
+    });
+
+    Effect::new({
+        let repaint = repaint.clone();
+        move |_| {
+            let _ = signals.debug.get();
+            debug_effect(state, signals);
+            repaint();
+        }
+    });
+
     let on_pointer_down = Callback::new(move |e: PointerEvent| {
         WhiteboardController::on_pointer_down(e, canvas_ref, state);
     });
@@ -196,5 +214,15 @@ pub fn Whiteboard(signals: ChalkSignals) -> impl IntoView {
             on:pointercancel=move |e| on_pointer_up.run(e)
             on:wheel=move |e| on_wheel.run(e)
         />
+    }
+}
+
+fn debug_effect(state: RwSignal<WhiteboardState>, signals: ChalkSignals) {
+    _ = (state, signals);
+    if signals.debug.get() > 0 {
+        leptos::logging::log!("Debug effect initialized");
+        state.update(|s| {
+            s.perform_debug_action();
+        });
     }
 }

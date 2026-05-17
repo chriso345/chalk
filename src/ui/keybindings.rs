@@ -70,6 +70,10 @@ static KEYBINDINGS: &[Keybinding] = &[
     // Delete Selection
     Keybinding::simple("Delete", "action:delete-selection"),
     Keybinding::simple("Backspace", "action:delete-selection"),
+    // Debug Action
+    Keybinding::simple("d", "debug:perform-action"),
+    // Generation Palette
+    Keybinding::simple("g", "ui:open-generation-palette"),
 ];
 
 /// Register a global `keydown` listener that fires `on_action` for any
