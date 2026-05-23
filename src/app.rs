@@ -66,6 +66,11 @@ pub fn App() -> impl IntoView {
                 signals.background.set(bg_kind);
             }
 
+            "action:open-github-repo" => {
+                window()
+                    .open_with_url_and_target("https://github.com/chriso345/chalk", "_blank")
+                    .ok();
+            }
             "debug:perform-action" => signals.debug.update(|n| *n += 1),
             _ => {
                 leptos::logging::log!("Unknown action: {action}");

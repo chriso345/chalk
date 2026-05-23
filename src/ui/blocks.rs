@@ -195,6 +195,12 @@ fn dark_toggle() -> PanelConfig {
             icon!("moon.svg"),
             "action:toggle-dark-mode",
         ))
+        .add(BoxConfig::icon_button(
+            "open-github-repo",
+            "open-github-repo-icon",
+            icon!("github.svg"),
+            "action:open-github-repo",
+        ))
 }
 
 fn background_dropdown_items() -> Vec<BoxConfig> {
