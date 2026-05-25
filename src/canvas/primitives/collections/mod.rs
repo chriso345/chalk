@@ -34,6 +34,7 @@ impl Collection {
         }
     }
 
+    #[allow(clippy::wrong_self_convention)]
     pub fn from_config(&self, fields: &HashMap<String, String>) -> Option<Collection> {
         match self {
             Collection::Grid { .. } => Some(Collection::Grid {

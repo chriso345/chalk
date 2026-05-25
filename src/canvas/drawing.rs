@@ -16,7 +16,7 @@ impl ActiveDrawing {
         let geom = match self {
             ActiveDrawing::Stroke(pts) if pts.is_empty() => return None,
             ActiveDrawing::Stroke(pts) => Geometry::Stroke(pts.clone()),
-            ActiveDrawing::Shape(s) => Geometry::from(s.build()),
+            ActiveDrawing::Shape(s) => s.build(),
         };
         Some(vec![Primitive::new(geom, style.clone())])
     }

@@ -2,10 +2,12 @@ use crate::canvas::primitives::ShapeKind;
 
 /// The active tool - determines how pointer events are interpreted.
 #[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Default)]
 pub enum Tool {
     /// Pans the viewport; no marks are made.
     Pan,
     /// Selecting pointer
+    #[default]
     Pointer,
     /// Freehand pen stroke.
     Pen,
@@ -35,8 +37,3 @@ impl Tool {
     }
 }
 
-impl Default for Tool {
-    fn default() -> Self {
-        Tool::Pointer
-    }
-}

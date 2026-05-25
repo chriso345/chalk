@@ -46,13 +46,12 @@ impl WhiteboardRenderer {
             PrimitiveRenderer::draw(&ctx, primitive);
         }
 
-        if let Some(active) = &state.active {
-            if let Some(prev) = active.preview(&state.current_style) {
+        if let Some(active) = &state.active
+            && let Some(prev) = active.preview(&state.current_style) {
                 for p in &prev {
                     PrimitiveRenderer::draw(&ctx, p);
                 }
             }
-        }
 
         ctx.restore();
     }

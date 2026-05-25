@@ -171,6 +171,6 @@ pub fn primitives_aabb<'a>(
         f64::NEG_INFINITY,
         f64::NEG_INFINITY,
     );
-    let bb = prims.fold(init, |acc, p| expand_aabb(acc, p));
+    let bb = prims.fold(init, expand_aabb);
     if bb.0.is_infinite() { None } else { Some(bb) }
 }

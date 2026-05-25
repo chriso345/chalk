@@ -123,11 +123,10 @@ pub fn Palette(open: RwSignal<bool>, on_action: Callback<&'static str>) -> impl 
     let input_ref = NodeRef::<leptos::html::Input>::new();
 
     Effect::new(move |_| {
-        if open.get() {
-            if let Some(el) = input_ref.get() {
+        if open.get()
+            && let Some(el) = input_ref.get() {
                 let _ = el.focus();
             }
-        }
     });
 
     view! {

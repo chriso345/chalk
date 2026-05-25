@@ -89,10 +89,11 @@ impl ChalkColor {
         COLORS.iter().find(|e| e.name == word).map(|e| e.color)
     }
 
-    pub fn to_word(&self) -> Option<&'static str> {
-        COLORS.iter().find(|e| e.color == *self).map(|e| e.name)
+    pub fn to_word(self) -> Option<&'static str> {
+        COLORS.iter().find(|e| e.color == self).map(|e| e.name)
     }
 
+    #[allow(clippy::wrong_self_convention)]
     pub fn to_hex(&self) -> &str {
         std::str::from_utf8(&self.hex).unwrap()
     }

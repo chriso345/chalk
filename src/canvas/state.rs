@@ -380,18 +380,15 @@ impl WhiteboardState {
     pub fn apply_selection(&mut self, world: Point, ctrl: bool) -> bool {
         let hit = self.hit_test(world);
         if ctrl {
-            match hit {
-                Some(idx) => {
-                    if self.selected.contains(&idx) {
-                        self.selected.remove(&idx);
-                    } else {
-                        self.selected.insert(idx);
-                    }
+            if let Some(idx) = hit {
+                if self.selected.contains(&idx) {
+                    self.selected.remove(&idx);
+                } else {
+                    self.selected.insert(idx);
                 }
-                None => {}
             }
         } else {
-            let inside_selection = hit.map_or(false, |idx| self.selected.contains(&idx))
+            let inside_selection = hit.is_some_and(|idx| self.selected.contains(&idx))
                 || self.point_in_selection_bounds(world); // CHANGED
             if !inside_selection {
                 self.selected.clear();

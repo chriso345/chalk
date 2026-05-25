@@ -33,7 +33,7 @@ pub struct BackgroundCache {
 }
 
 thread_local! {
-    pub static BG_CACHE: RefCell<Option<BackgroundCache>> = RefCell::new(None);
+    pub static BG_CACHE: RefCell<Option<BackgroundCache>> = const { RefCell::new(None) };
 }
 
 pub fn get_screen_spacing(zoom: f64) -> f64 {
@@ -47,11 +47,10 @@ where
     BG_CACHE.with(|cell| {
         let mut cache = cell.borrow_mut();
 
-        if let Some(ref c) = *cache {
-            if c.key == key {
+        if let Some(ref c) = *cache
+            && c.key == key {
                 return c.offscreen.clone();
             }
-        }
 
         let oc = OffscreenCanvas::new(w, h).unwrap();
         let ctx = oc

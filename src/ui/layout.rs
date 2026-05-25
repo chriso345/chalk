@@ -258,7 +258,7 @@ impl BoxConfig {
 
 impl Anchor {
     /// Returns the `position:fixed` CSS snippet that places the panel.
-    pub fn to_css(&self, offset: (i32, i32)) -> String {
+    pub fn to_css(self, offset: (i32, i32)) -> String {
         let (dx, dy) = offset;
         match self {
             Anchor::TopLeft => format!("top:{}px;left:{}px;", dy, dx),
@@ -290,7 +290,7 @@ impl Anchor {
 }
 
 impl Direction {
-    pub fn to_flex_css(&self) -> &'static str {
+    pub fn to_flex_css(self) -> &'static str {
         match self {
             Direction::Row => "row",
             Direction::Column => "column",

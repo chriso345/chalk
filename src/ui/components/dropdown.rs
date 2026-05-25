@@ -96,11 +96,10 @@ pub fn Dropdown(
 
     // Mount dropdown to overlay root when open
     Effect::new(move |_| {
-        if open.get() {
-            if let Some(node) = dropdown_node.get() {
+        if open.get()
+            && let Some(node) = dropdown_node.get() {
                 mount_to_overlay_root(&node);
             }
-        }
     });
 
     view! {

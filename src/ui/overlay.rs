@@ -118,10 +118,7 @@ pub fn render_box(
 
             // icon_button: has image children instead of a text label
             if let Some(inner_children) = config.children {
-                let hint = match config.hint {
-                    Some(s) => s,
-                    None => "",
-                };
+                let hint = config.hint.unwrap_or_default();
 
                 let icons: Vec<_> = inner_children
                     .into_iter()

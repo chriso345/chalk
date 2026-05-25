@@ -19,7 +19,7 @@ pub fn App() -> impl IntoView {
     let signals = ChalkSignals::new();
 
     let generation_palette_open = RwSignal::new(false);
-    let generation_palette_open_cb = generation_palette_open.clone();
+    let generation_palette_open_cb = generation_palette_open;
     let on_action = Callback::new(move |action: &'static str| {
         // TODO: Change action to a proper action type (this can then be stored in history for undo/redo)
         match action {
@@ -48,8 +48,8 @@ pub fn App() -> impl IntoView {
             action if action.starts_with("action:set-color-") => {
                 let color = action.trim_start_matches("action:set-color-");
                 let ccolor = ChalkColor::from_word(color);
-                if ccolor.is_some() {
-                    signals.color.set(ccolor.unwrap());
+                if let Some(col) = ccolor {
+                    signals.color.set(col);
                 }
             }
 
@@ -79,23 +79,19 @@ pub fn App() -> impl IntoView {
     });
 
     Effect::new({
-        let on_action = on_action.clone();
         move |_| {
             keybindings::register(on_action);
         }
     });
 
-    let ctx = OverlayContext {
-        signals,
-        on_action: on_action.clone(),
-    };
+    let ctx = OverlayContext { signals, on_action };
     let panels = build_layout();
 
     view! {
         <Whiteboard signals=signals />
         <Overlay panels=panels ctx=ctx />
 
-        <Palette open=signals.palette_open on_action=on_action.clone() />
+        <Palette open=signals.palette_open on_action=on_action />
         <GenerationFlow
             open=generation_palette_open
             on_commit=Callback::new(move |collection: Collection| {

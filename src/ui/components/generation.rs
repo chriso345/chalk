@@ -22,11 +22,10 @@ pub fn GenerationFlow(open: RwSignal<bool>, on_commit: Callback<Collection>) -> 
     });
 
     let on_proceed = Callback::new(move |fields: std::collections::HashMap<String, String>| {
-        if let Some(collection) = pending.get() {
-            if let Some(configured) = collection.from_config(&fields) {
+        if let Some(collection) = pending.get()
+            && let Some(configured) = collection.from_config(&fields) {
                 on_commit.run(configured);
             }
-        }
         pending.set(None);
     });
 
@@ -67,7 +66,7 @@ pub fn GenerationPalette(open: RwSignal<bool>, on_select: Callback<Collection>) 
     let close = move || open.set(false);
     let commit = move |collection: &Collection| {
         close();
-        on_select.run(collection.clone());
+        on_select.run(*collection);
     };
 
     view! {
@@ -79,8 +78,8 @@ pub fn GenerationPalette(open: RwSignal<bool>, on_select: Callback<Collection>) 
                     </div>
                     <div style="overflow-y:auto;padding:6px;">
                     {{
-                        let selected = selected.clone();
-                        let commit = commit.clone();
+                        let selected = selected;
+                        let commit = commit;
                         generation_palette_items().into_iter().enumerate().map(move |(idx, item)| {
                             let is_selected = selected.get() == idx;
                             view! {

@@ -73,7 +73,6 @@ pub fn Whiteboard(signals: ChalkSignals) -> impl IntoView {
 
     Effect::new({
         let repaint = repaint.clone();
-        let canvas_ref = canvas_ref.clone();
         move |_| {
             let zoom_percent = signals.zoom.get();
             let target_zoom = (zoom_percent as f64 / 100.0).clamp(MIN_ZOOM, MAX_ZOOM);
@@ -118,7 +117,6 @@ pub fn Whiteboard(signals: ChalkSignals) -> impl IntoView {
 
     Effect::new({
         let repaint = repaint.clone();
-        let canvas_ref = canvas_ref.clone();
         move |_| {
             let Some(canvas) = canvas_ref.get() else {
                 return;
@@ -193,10 +191,10 @@ pub fn Whiteboard(signals: ChalkSignals) -> impl IntoView {
     });
 
     let cursor = move || {
-        if signals.tool.get() == Tool::Pointer {
-            if let Some(handle) = hovered_handle.get() {
-                return handle.cursor().to_string();
-            }
+        if signals.tool.get() == Tool::Pointer
+            && let Some(handle) = hovered_handle.get()
+        {
+            return handle.cursor().to_string();
         }
         signals.tool.get().cursor().to_string()
     };
