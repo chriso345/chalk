@@ -8,8 +8,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   
 <script type="module">
-import init, * as bindings from '/chalk/chalk-db37d1ad4e8f514c.js';
-const wasm = await init({ module_or_path: '/chalk/chalk-db37d1ad4e8f514c_bg.wasm' });
+import init, * as bindings from '/chalk/chalk-260cb027a7085355.js';
+const wasm = await init({ module_or_path: '/chalk/chalk-260cb027a7085355_bg.wasm' });
 
 
 window.wasmBindings = bindings;
@@ -19,5 +19,5 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
 
 </script>
   
-<link rel="modulepreload" href="/chalk/chalk-db37d1ad4e8f514c.js" crossorigin="anonymous" integrity="sha384-xCSxLZVADLmmB6UzaGADzLZ3U+FL6HzDMNk69PaCDS8JQgy2NIEnyl4uKuKUpXgK"><link rel="preload" href="/chalk/chalk-db37d1ad4e8f514c_bg.wasm" crossorigin="anonymous" integrity="sha384-GBAKbomiVEhduqE3cmGyrTuNd1iFAum1di9uga9Dv+ubCUa+u+IIBOBOWCgR2MJn" as="fetch" type="application/wasm"></head>
+<link rel="modulepreload" href="/chalk/chalk-260cb027a7085355.js" crossorigin="anonymous" integrity="sha384-HNLAHptCG0K5aKVzEAKTbPHMCxOEKwCGoo7fxJkNbhfJb4NZ0m4ZrHAIvaw+4nOZ"><link rel="preload" href="/chalk/chalk-260cb027a7085355_bg.wasm" crossorigin="anonymous" integrity="sha384-yVCYFUA6jZxRPbi5KqabJ8NVfq+xY39ck3YKmUOkDen15SRpQ4rCoT9kmOoxA2D1" as="fetch" type="application/wasm"></head>
 </html>
