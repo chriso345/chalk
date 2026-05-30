@@ -69,6 +69,13 @@ impl WhiteboardController {
                     s.begin_drag(screen);
                     return;
                 }
+
+                // Start selection drag if nothing is hit and not ctrl
+                if !ctrl && s.hit_test(world).is_none() {
+                    s.selection_drag_start = Some(screen);
+                    s.selection_drag_current = Some(screen);
+                    return;
+                }
             }
             s.begin_drawing(screen, is_middle);
         });
@@ -79,7 +86,7 @@ impl WhiteboardController {
         canvas_ref: NodeRef<leptos::html::Canvas>,
         state: RwSignal<WhiteboardState>,
     ) {
-        if !state.with_untracked(|s| s.is_drawing) {
+        if !state.with_untracked(|s| s.is_drawing || s.selection_drag_start.is_some()) {
             return;
         }
         e.prevent_default();
@@ -89,6 +96,10 @@ impl WhiteboardController {
 
         state.update(|s| {
             if s.tool == Tool::Pointer && !is_middle {
+                if s.selection_drag_start.is_some() {
+                    s.selection_drag_current = Some(screen);
+                    return;
+                }
                 if s.drag_handle.is_some() {
                     s.update_handle_drag(screen, e.shift_key());
                     return;
@@ -114,6 +125,42 @@ impl WhiteboardController {
     ) {
         state.update(|s| {
             if s.tool == Tool::Pointer {
+                // Commit selection drag
+                if let (Some(start), Some(end)) = (
+                    s.selection_drag_start.take(),
+                    s.selection_drag_current.take(),
+                ) {
+                    let (x0, y0) = start;
+                    let (x1, y1) = end;
+                    let minx = x0.min(x1);
+                    let miny = y0.min(y1);
+                    let maxx = x0.max(x1);
+                    let maxy = y0.max(y1);
+                    let vt = s.vt;
+                    let world0 = vt.screen_to_world(minx, miny);
+                    let world1 = vt.screen_to_world(maxx, maxy);
+                    s.selected.clear();
+                    for (i, prim) in s.document.iter().enumerate() {
+                        let (minx, miny, maxx, maxy) =
+                            crate::canvas::primitives::geometry::expand_aabb(
+                                (
+                                    f64::INFINITY,
+                                    f64::INFINITY,
+                                    f64::NEG_INFINITY,
+                                    f64::NEG_INFINITY,
+                                ),
+                                prim,
+                            );
+                        if minx >= world0.0
+                            && maxx <= world1.0
+                            && miny >= world0.1
+                            && maxy <= world1.1
+                        {
+                            s.selected.insert(i);
+                        }
+                    }
+                    return;
+                }
                 // Handle resize commit.
                 if s.drag_handle.is_some() {
                     let moves = s.end_handle_drag();

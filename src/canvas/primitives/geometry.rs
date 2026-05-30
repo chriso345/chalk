@@ -114,6 +114,28 @@ impl Geometry {
             other => other.clone(),
         }
     }
+
+    /// Returns the axis-aligned bounding box (minx, miny, maxx, maxy) for this geometry, if applicable.
+    pub fn aabb(&self) -> Option<(f64, f64, f64, f64)> {
+        match self {
+            Geometry::Line { start, end } | Geometry::Arrow { start, end } => {
+                let minx = start.0.min(end.0);
+                let miny = start.1.min(end.1);
+                let maxx = start.0.max(end.0);
+                let maxy = start.1.max(end.1);
+                Some((minx, miny, maxx, maxy))
+            }
+            Geometry::Rect {
+                origin: (ox, oy),
+                size: (w, h),
+            }
+            | Geometry::Oval {
+                origin: (ox, oy),
+                size: (w, h),
+            } => Some((*ox, *oy, *ox + *w, *oy + *h)),
+            _ => None,
+        }
+    }
 }
 
 /// Expand an AABB (minx, miny, maxx, maxy) to include the given primitive's

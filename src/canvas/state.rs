@@ -42,6 +42,9 @@ pub struct WhiteboardState {
     /// Per-primitive geometry snapshot at drag start, for proportional remap.
     pub drag_handle_initial_geoms: Vec<(usize, Geometry, Point)>, // (idx, geom, transform_pos)
 
+    /// Selection drag start and current (screen-space, not world)
+    pub selection_drag_start: Option<Point>,
+    pub selection_drag_current: Option<Point>,
     /// Primitives drawn to the canvas
     pub document: Vec<Primitive>,
 
@@ -84,6 +87,8 @@ impl WhiteboardState {
             drag_handle_initial_aabb: None,
             drag_handle_initial_geoms: Vec::new(),
 
+            selection_drag_start: None,
+            selection_drag_current: None,
             document: Vec::<Primitive>::new(),
 
             vt: ViewTransform::default(),
@@ -110,6 +115,8 @@ impl WhiteboardState {
         self.drag_handle_initial_aabb = None;
         self.drag_handle_initial_geoms.clear();
         self.tool = tool;
+        self.selection_drag_start = None;
+        self.selection_drag_current = None;
     }
 
     pub fn set_background_pattern(&mut self, pattern: BackgroundKind) {
@@ -423,14 +430,33 @@ impl WhiteboardState {
     /// Returns the handle kind and its world position if the point is within
     /// hit radius of any handle.
     pub fn hit_test_handle(&self, world: Point, zoom: f64) -> Option<HandleKind> {
-        let (minx, miny, maxx, maxy) = self.selection_bounds()?;
         let hit_radius = 8.0 / zoom; // fixed screen-space radius
-        for &kind in HandleKind::ALL {
-            let (hx, hy) = kind.position(minx, miny, maxx, maxy);
+        // Use only endpoint handles for lines/arrows, else all bbox handles
+        let selected: Vec<_> = self.selected.iter().copied().collect();
+        if selected.is_empty() {
+            return None;
+        }
+
+        // Only test handles for the first selected primitive
+        let idx = selected[0];
+        let prim = &self.document[idx];
+        let handle_positions = prim.handle_positions();
+        for (i, (hx, hy)) in handle_positions.iter().enumerate() {
             let dx = world.0 - hx;
             let dy = world.1 - hy;
             if dx * dx + dy * dy <= hit_radius * hit_radius {
-                return Some(kind);
+                // For lines/arrows, return Left/Right for start/end, else actual handle kind
+                if let crate::canvas::primitives::geometry::Geometry::Line { .. }
+                | crate::canvas::primitives::geometry::Geometry::Arrow { .. } = prim.geometry
+                {
+                    return Some(if i == 0 {
+                        HandleKind::PivotStart
+                    } else {
+                        HandleKind::PivotEnd
+                    });
+                } else {
+                    return Some(HandleKind::ALL[i]);
+                }
             }
         }
         None
@@ -505,34 +531,64 @@ impl WhiteboardState {
             }
         }
 
-        // Prevent inversion — enforce minimum size.
+        // Allow flipping: do not enforce minx <= maxx or miny <= maxy, just clamp size to minimum if needed.
         let min_size = 1.0;
-        if maxx - minx < min_size {
-            maxx = minx + min_size;
+        if (maxx - minx).abs() < min_size {
+            if maxx > minx {
+                maxx = minx + min_size;
+            } else {
+                maxx = minx - min_size;
+            }
         }
-        if maxy - miny < min_size {
-            maxy = miny + min_size;
+        if (maxy - miny).abs() < min_size {
+            if maxy > miny {
+                maxy = miny + min_size;
+            } else {
+                maxy = miny - min_size;
+            }
         }
 
         let new_aabb = (minx, miny, maxx, maxy);
 
         for &(idx, ref geom, pos) in &self.drag_handle_initial_geoms {
-            // The initial geometry is stored without the transform offset,
-            // so shift the AABBs into geometry-local space.
-            let (tx, ty) = pos;
-            let local_initial = (
-                initial_aabb.0 - tx,
-                initial_aabb.1 - ty,
-                initial_aabb.2 - tx,
-                initial_aabb.3 - ty,
-            );
-            let local_new = (
-                new_aabb.0 - tx,
-                new_aabb.1 - ty,
-                new_aabb.2 - tx,
-                new_aabb.3 - ty,
-            );
-            self.document[idx].geometry = geom.remap_aabb(local_initial, local_new);
+            // Special case: for lines/arrows, move only the selected endpoint, pivot around the other
+            if let Geometry::Line { start, end } | Geometry::Arrow { start, end } = geom {
+                let mut new_start = *start;
+                let mut new_end = *end;
+                match handle {
+                    HandleKind::PivotStart => new_start = (start.0 + delta.0, start.1 + delta.1),
+                    HandleKind::PivotEnd => new_end = (end.0 + delta.0, end.1 + delta.1),
+                    _ => {}
+                }
+                self.document[idx].geometry = match geom {
+                    Geometry::Line { .. } => Geometry::Line {
+                        start: new_start,
+                        end: new_end,
+                    },
+                    Geometry::Arrow { .. } => Geometry::Arrow {
+                        start: new_start,
+                        end: new_end,
+                    },
+                    _ => unreachable!(),
+                };
+            } else {
+                // The initial geometry is stored without the transform offset,
+                // so shift the AABBs into geometry-local space.
+                let (tx, ty) = pos;
+                let local_initial = (
+                    initial_aabb.0 - tx,
+                    initial_aabb.1 - ty,
+                    initial_aabb.2 - tx,
+                    initial_aabb.3 - ty,
+                );
+                let local_new = (
+                    new_aabb.0 - tx,
+                    new_aabb.1 - ty,
+                    new_aabb.2 - tx,
+                    new_aabb.3 - ty,
+                );
+                self.document[idx].geometry = geom.remap_aabb(local_initial, local_new);
+            }
         }
     }
 
