@@ -163,8 +163,8 @@ pub fn Whiteboard(signals: ChalkSignals) -> impl IntoView {
     Effect::new({
         let repaint = repaint.clone();
         move |_| {
-            let _ = signals.collection.get();
-            state.update(|s| s.stamp_collection(signals.collection.get()));
+            let c = signals.collection.get();
+            state.update(|s| s.stamp_collection(c));
             repaint();
         }
     });
