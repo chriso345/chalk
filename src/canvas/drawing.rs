@@ -2,9 +2,10 @@ use crate::canvas::{
     primitives::{Geometry, Primitive, PrimitiveStyle, ShapeInProgress},
     types::Point,
 };
+use serde::{Deserialize, Serialize};
 
 /// What the user is currently drawing. Cleared on pointer-up.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum ActiveDrawing {
     Stroke(Vec<Point>),
     Shape(ShapeInProgress),

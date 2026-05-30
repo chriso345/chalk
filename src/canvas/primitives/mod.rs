@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 pub mod geometry;
 pub mod handle;
 pub mod renderer;
@@ -15,7 +17,7 @@ pub use transform::Transform;
 /// A fully self-contained drawable unit.
 /// Carries its own geometry, style, and transform.
 /// Groups / compound objects are handled at a higher layer (see `Element`).
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Primitive {
     pub geometry: Geometry,
     pub style: PrimitiveStyle,

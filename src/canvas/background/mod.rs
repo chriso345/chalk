@@ -1,5 +1,6 @@
 use std::cell::RefCell;
 
+use serde::{Deserialize, Serialize};
 use wasm_bindgen::JsCast;
 use web_sys::{
     CanvasRenderingContext2d, HtmlCanvasElement, OffscreenCanvas, OffscreenCanvasRenderingContext2d,
@@ -48,9 +49,10 @@ where
         let mut cache = cell.borrow_mut();
 
         if let Some(ref c) = *cache
-            && c.key == key {
-                return c.offscreen.clone();
-            }
+            && c.key == key
+        {
+            return c.offscreen.clone();
+        }
 
         let oc = OffscreenCanvas::new(w, h).unwrap();
         let ctx = oc
@@ -68,7 +70,7 @@ where
     })
 }
 
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug, Serialize, Deserialize)]
 pub enum BackgroundKind {
     None,
     Dots,

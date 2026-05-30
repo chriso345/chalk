@@ -1,6 +1,7 @@
 use crate::canvas::primitives::Primitive;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum ChalkAction {
     Add {
         primitive: Primitive,

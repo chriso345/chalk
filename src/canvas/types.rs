@@ -1,9 +1,11 @@
+use serde::{Deserialize, Serialize};
+
 /// A single (x, y) point in world space.
 pub type Point = (f64, f64);
 
 /// The current viewport transform: where the world origin sits on screen
 /// and the zoom level.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct ViewTransform {
     pub offset_x: f64,
     pub offset_y: f64,

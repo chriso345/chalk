@@ -1,5 +1,6 @@
 use crate::canvas::background::BackgroundKind;
 
+#[derive(Clone)]
 pub struct ChalkStyles<'a> {
     /// The background color of the chalkboard
     pub canvas_color: &'a str,
@@ -8,6 +9,12 @@ pub struct ChalkStyles<'a> {
     pub canvas_bg: BackgroundKind,
 
     pub is_dark: bool,
+}
+
+impl<'a> Default for ChalkStyles<'a> {
+    fn default() -> Self {
+        ChalkStyles::dark()
+    }
 }
 
 impl ChalkStyles<'_> {

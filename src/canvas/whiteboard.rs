@@ -10,12 +10,26 @@ use crate::canvas::{
     state::WhiteboardState,
 };
 use crate::signals::ChalkSignals;
+use serde_json;
 
 #[component]
 pub fn Whiteboard(signals: ChalkSignals) -> impl IntoView {
     let canvas_ref = NodeRef::<leptos::html::Canvas>::new();
-    let state = RwSignal::new(WhiteboardState::new());
+
+    let state = RwSignal::new(load_whiteboard_state());
     let repaint = make_repaint(canvas_ref, state);
+
+    Effect::new({
+        move |_| {
+            let _ = state.get();
+            let window = web_sys::window().unwrap();
+            let storage = window.local_storage().unwrap().unwrap();
+            let s = state.with_untracked(|s| s.clone());
+            if let Ok(json) = serde_json::to_string(&s) {
+                let _ = storage.set_item("chalk_whiteboard", &json);
+            }
+        }
+    });
 
     Effect::new({
         let repaint = repaint.clone();
@@ -38,8 +52,10 @@ pub fn Whiteboard(signals: ChalkSignals) -> impl IntoView {
     Effect::new({
         let repaint = repaint.clone();
         move |_| {
-            let _ = signals.clear.get();
-            state.update(|s| s.clear());
+            let n = signals.clear.get();
+            if n > 0 {
+                state.update(|s| s.clear());
+            }
             repaint();
         }
     });
@@ -222,5 +238,16 @@ fn debug_effect(state: RwSignal<WhiteboardState>, signals: ChalkSignals) {
         state.update(|s| {
             s.perform_debug_action();
         });
+    }
+}
+
+fn load_whiteboard_state() -> WhiteboardState {
+    let window = web_sys::window().unwrap();
+    let storage = window.local_storage().unwrap().unwrap();
+    let loaded = storage.get_item("chalk_whiteboard").ok().flatten();
+    if let Some(saved) = loaded {
+        serde_json::from_str::<WhiteboardState>(&saved).unwrap_or_default()
+    } else {
+        WhiteboardState::new()
     }
 }

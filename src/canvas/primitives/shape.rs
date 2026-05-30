@@ -1,6 +1,7 @@
 use crate::canvas::{primitives::geometry::Geometry, types::Point};
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ShapeKind {
     Line,
     Arrow,
@@ -9,7 +10,7 @@ pub enum ShapeKind {
 }
 
 /// Transient in-progress shape being drawn. Produces `Geometry` on `build()`.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ShapeInProgress {
     pub kind: ShapeKind,
     pub anchor: Point,

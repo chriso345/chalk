@@ -1,6 +1,8 @@
+use serde::{Deserialize, Serialize};
+
 /// All styling properties for a single primitive.
 /// Colors are stored as CSS color strings (cheap to clone, easy to pass to Canvas2D).
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct PrimitiveStyle {
     /// Stroke color. `None` means no stroke is drawn.
     pub stroke_color: Option<String>,

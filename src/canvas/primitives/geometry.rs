@@ -1,8 +1,9 @@
 use crate::canvas::types::Point;
+use serde::{Deserialize, Serialize};
 
 /// The pure geometric description of a primitive — no style, no transform.
 /// Polygon is reserved for future use.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum Geometry {
     /// Freehand polyline (smoothed at render time with Catmull-Rom).
     Stroke(Vec<Point>),
