@@ -42,6 +42,9 @@ pub struct WhiteboardState {
     /// Per-primitive geometry snapshot at drag start, for proportional remap.
     pub drag_handle_initial_geoms: Vec<(usize, Geometry, Point)>, // (idx, geom, transform_pos)
 
+    /// Selection drag start and current (screen-space, not world)
+    pub selection_drag_start: Option<Point>,
+    pub selection_drag_current: Option<Point>,
     /// Primitives drawn to the canvas
     pub document: Vec<Primitive>,
 
@@ -84,6 +87,8 @@ impl WhiteboardState {
             drag_handle_initial_aabb: None,
             drag_handle_initial_geoms: Vec::new(),
 
+            selection_drag_start: None,
+            selection_drag_current: None,
             document: Vec::<Primitive>::new(),
 
             vt: ViewTransform::default(),
@@ -110,6 +115,8 @@ impl WhiteboardState {
         self.drag_handle_initial_aabb = None;
         self.drag_handle_initial_geoms.clear();
         self.tool = tool;
+        self.selection_drag_start = None;
+        self.selection_drag_current = None;
     }
 
     pub fn set_background_pattern(&mut self, pattern: BackgroundKind) {

@@ -25,6 +25,24 @@ impl WhiteboardRenderer {
             state.background_pattern.draw(&ctx, canvas, state);
         }
 
+        if let (Some(start), Some(current)) =
+            (state.selection_drag_start, state.selection_drag_current)
+        {
+            let (x0, y0) = start;
+            let (x1, y1) = current;
+            let minx = x0.min(x1);
+            let miny = y0.min(y1);
+            let w = (x1 - x0).abs();
+            let h = (y1 - y0).abs();
+            ctx.save();
+            ctx.set_stroke_style_str("#1976d2");
+            ctx.set_line_width(1.5);
+            ctx.set_fill_style_str("rgba(25, 118, 210, 0.18)");
+            ctx.fill_rect(minx, miny, w, h);
+            ctx.stroke_rect(minx, miny, w, h);
+            ctx.restore();
+        }
+
         ctx.save();
         ctx.translate(state.vt.offset_x, state.vt.offset_y).unwrap();
         ctx.scale(state.vt.zoom, state.vt.zoom).unwrap();
@@ -47,11 +65,12 @@ impl WhiteboardRenderer {
         }
 
         if let Some(active) = &state.active
-            && let Some(prev) = active.preview(&state.current_style) {
-                for p in &prev {
-                    PrimitiveRenderer::draw(&ctx, p);
-                }
+            && let Some(prev) = active.preview(&state.current_style)
+        {
+            for p in &prev {
+                PrimitiveRenderer::draw(&ctx, p);
             }
+        }
 
         ctx.restore();
     }
