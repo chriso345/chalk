@@ -1,9 +1,8 @@
-use std::collections::HashMap;
-
 use crate::{
     canvas::primitives::{Geometry, Primitive, PrimitiveStyle, collections::Configurable},
     ui::components::config_popup::ConfigField,
 };
+use std::collections::HashMap;
 
 #[derive(Clone, Debug, Copy)]
 pub struct GridCollection {
@@ -67,44 +66,44 @@ impl GridCollection {
 impl Configurable for GridCollection {
     fn config_fields(&self) -> Vec<ConfigField> {
         vec![
-            ConfigField {
-                name: "origin",
-                label: "Origin (x, y)",
-                value: format!("{},{}", self.origin.0, self.origin.1),
+            ConfigField::Float2 {
+                key_a: "origin_x",
+                key_b: "origin_y",
+                label: "Origin",
+                label_a: "x",
+                label_b: "y",
+                default_a: self.origin.0,
+                default_b: self.origin.1,
             },
-            ConfigField {
-                name: "spacing",
-                label: "Spacing (x, y)",
-                value: format!("{},{}", self.spacing.0, self.spacing.1),
+            ConfigField::Float2 {
+                key_a: "spacing_x",
+                key_b: "spacing_y",
+                label: "Spacing",
+                label_a: "x",
+                label_b: "y",
+                default_a: self.spacing.0,
+                default_b: self.spacing.1,
             },
-            ConfigField {
-                name: "count",
-                label: "Count (x, y)",
-                value: format!("{},{}", self.count.0, self.count.1),
+            ConfigField::Int2 {
+                key_a: "count_x",
+                key_b: "count_y",
+                label: "Count",
+                label_a: "cols",
+                label_b: "rows",
+                default_a: self.count.0 as i64,
+                default_b: self.count.1 as i64,
             },
         ]
     }
 
     fn from_config(fields: &HashMap<String, String>) -> Option<Self> {
-        let parse_pair_f = |s: &str| -> Option<(f64, f64)> {
-            let mut it = s.splitn(2, ',');
-            Some((
-                it.next()?.trim().parse().ok()?,
-                it.next()?.trim().parse().ok()?,
-            ))
-        };
-        let parse_pair_u = |s: &str| -> Option<(u32, u32)> {
-            let mut it = s.splitn(2, ',');
-            Some((
-                it.next()?.trim().parse().ok()?,
-                it.next()?.trim().parse().ok()?,
-            ))
-        };
+        let f = |k: &str| fields.get(k)?.trim().parse::<f64>().ok();
+        let u = |k: &str| fields.get(k)?.trim().parse::<u32>().ok();
 
         Some(GridCollection {
-            origin: parse_pair_f(fields.get("origin")?)?,
-            spacing: parse_pair_f(fields.get("spacing")?)?,
-            count: parse_pair_u(fields.get("count")?)?,
+            origin: (f("origin_x")?, f("origin_y")?),
+            spacing: (f("spacing_x")?, f("spacing_y")?),
+            count: (u("count_x")?, u("count_y")?),
         })
     }
 }
