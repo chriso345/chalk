@@ -1,21 +1,43 @@
 use crate::canvas::{action::ChalkAction, primitives::Primitive};
 use serde::{Deserialize, Serialize};
+use std::collections::VecDeque;
 
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct History {
     /// Linear history of actions
-    actions: Vec<ChalkAction>,
+    actions: VecDeque<ChalkAction>,
     /// How many actions are "active"
     cursor: usize,
+    /// Capacity of the history; when exceeded, oldest actions are dropped
+    capacity: usize,
+}
+
+impl Default for History {
+    fn default() -> Self {
+        Self {
+            actions: VecDeque::new(),
+            cursor: 0,
+            capacity: 100,
+        }
+    }
 }
 
 impl History {
     pub fn apply(&mut self, doc: &mut Vec<Primitive>, action: ChalkAction) {
-        // discard redo stack
-        self.actions.truncate(self.cursor);
+        while self.actions.len() > self.capacity {
+            self.actions.pop_front();
+
+            if self.cursor > 0 {
+                self.cursor -= 1;
+            }
+        }
+
+        if self.cursor < self.actions.len() {
+            self.actions.truncate(self.cursor);
+        }
 
         self.apply_action(doc, &action);
-        self.actions.push(action);
+        self.actions.push_back(action);
         self.cursor += 1;
     }
 
@@ -93,8 +115,19 @@ impl History {
     }
 
     pub fn push_without_apply(&mut self, action: ChalkAction) {
-        self.actions.truncate(self.cursor);
-        self.actions.push(action);
+        if self.cursor < self.actions.len() {
+            self.actions.truncate(self.cursor);
+        }
+
+        if self.actions.len() == self.capacity {
+            self.actions.pop_front();
+
+            if self.cursor > 0 {
+                self.cursor -= 1;
+            }
+        }
+
+        self.actions.push_back(action);
         self.cursor += 1;
     }
 }
