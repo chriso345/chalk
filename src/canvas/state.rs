@@ -430,35 +430,50 @@ impl WhiteboardState {
     /// Returns the handle kind and its world position if the point is within
     /// hit radius of any handle.
     pub fn hit_test_handle(&self, world: Point, zoom: f64) -> Option<HandleKind> {
-        let hit_radius = 8.0 / zoom; // fixed screen-space radius
-        // Use only endpoint handles for lines/arrows, else all bbox handles
+        let hit_radius = 8.0 / zoom;
         let selected: Vec<_> = self.selected.iter().copied().collect();
         if selected.is_empty() {
             return None;
         }
 
-        // Only test handles for the first selected primitive
+        // Single primitive selected
         let idx = selected[0];
         let prim = &self.document[idx];
-        let handle_positions = prim.handle_positions();
-        for (i, (hx, hy)) in handle_positions.iter().enumerate() {
+
+        if selected.len() == 1 {
+            // Lines and arrows: expose only the two endpoint pivot handles
+            match &prim.geometry {
+                Geometry::Line { .. } | Geometry::Arrow { .. } => {
+                    let handles = prim.handle_positions();
+                    for (i, (hx, hy)) in handles.iter().enumerate() {
+                        let dx = world.0 - hx;
+                        let dy = world.1 - hy;
+                        if dx * dx + dy * dy <= hit_radius * hit_radius {
+                            return Some(if i == 0 {
+                                HandleKind::PivotStart
+                            } else {
+                                HandleKind::PivotEnd
+                            });
+                        }
+                    }
+                    return None;
+                }
+                _ => {}
+            }
+        }
+
+        // All other cases (non-line single selection, or multi-selection):
+        // expose the 8 AABB corner/edge handles.
+        let (minx, miny, maxx, maxy) = self.selection_bounds()?;
+        for &kind in HandleKind::ALL {
+            let (hx, hy) = kind.position(minx, miny, maxx, maxy);
             let dx = world.0 - hx;
             let dy = world.1 - hy;
             if dx * dx + dy * dy <= hit_radius * hit_radius {
-                // For lines/arrows, return Left/Right for start/end, else actual handle kind
-                if let crate::canvas::primitives::geometry::Geometry::Line { .. }
-                | crate::canvas::primitives::geometry::Geometry::Arrow { .. } = prim.geometry
-                {
-                    return Some(if i == 0 {
-                        HandleKind::PivotStart
-                    } else {
-                        HandleKind::PivotEnd
-                    });
-                } else {
-                    return Some(HandleKind::ALL[i]);
-                }
+                return Some(kind);
             }
         }
+
         None
     }
 
@@ -509,12 +524,11 @@ impl WhiteboardState {
             }
         }
 
-        // Snap to square if shift held, using the larger axis delta.
+        // Snap to square (shift held): use the larger axis delta.
         if snap {
             let dw = (maxx - minx) - (initial_aabb.2 - initial_aabb.0);
             let dh = (maxy - miny) - (initial_aabb.3 - initial_aabb.1);
             let d = if dw.abs() > dh.abs() { dw } else { dh };
-            let (ax, min_ax, ay, min_ay) = handle.axes();
             if ax && ay {
                 let w = (initial_aabb.2 - initial_aabb.0) + d;
                 let h = (initial_aabb.3 - initial_aabb.1) + d;
@@ -531,7 +545,7 @@ impl WhiteboardState {
             }
         }
 
-        // Allow flipping: do not enforce minx <= maxx or miny <= maxy, just clamp size to minimum if needed.
+        // Enforce minimum size (allow flipping).
         let min_size = 1.0;
         if (maxx - minx).abs() < min_size {
             if maxx > minx {
@@ -551,43 +565,104 @@ impl WhiteboardState {
         let new_aabb = (minx, miny, maxx, maxy);
 
         for &(idx, ref geom, pos) in &self.drag_handle_initial_geoms {
-            // Special case: for lines/arrows, move only the selected endpoint, pivot around the other
-            if let Geometry::Line { start, end } | Geometry::Arrow { start, end } = geom {
-                let mut new_start = *start;
-                let mut new_end = *end;
-                match handle {
-                    HandleKind::PivotStart => new_start = (start.0 + delta.0, start.1 + delta.1),
-                    HandleKind::PivotEnd => new_end = (end.0 + delta.0, end.1 + delta.1),
-                    _ => {}
+            match geom {
+                // Lines and arrows
+                Geometry::Line { start, end } | Geometry::Arrow { start, end } => {
+                    let new_geom = match handle {
+                        // Endpoint pivot handles — move only the dragged tip.
+                        HandleKind::PivotStart => {
+                            let new_start = (start.0 + delta.0, start.1 + delta.1);
+                            match geom {
+                                Geometry::Line { .. } => Geometry::Line {
+                                    start: new_start,
+                                    end: *end,
+                                },
+                                Geometry::Arrow { .. } => Geometry::Arrow {
+                                    start: new_start,
+                                    end: *end,
+                                },
+                                _ => unreachable!(),
+                            }
+                        }
+                        HandleKind::PivotEnd => {
+                            let new_end = (end.0 + delta.0, end.1 + delta.1);
+                            match geom {
+                                Geometry::Line { .. } => Geometry::Line {
+                                    start: *start,
+                                    end: new_end,
+                                },
+                                Geometry::Arrow { .. } => Geometry::Arrow {
+                                    start: *start,
+                                    end: new_end,
+                                },
+                                _ => unreachable!(),
+                            }
+                        }
+                        // AABB corner/edge handles on a line — stretch both endpoints
+                        // proportionally so the line fills the new bounding box.
+                        _ => {
+                            let (ix0, iy0, ix1, iy1) = initial_aabb;
+                            let iw = ix1 - ix0;
+                            let ih = iy1 - iy0;
+                            let nw = new_aabb.2 - new_aabb.0;
+                            let nh = new_aabb.3 - new_aabb.1;
+
+                            // Map each endpoint from the old AABB into the new one.
+                            let remap = |px: f64, py: f64| -> Point {
+                                let sx = if iw.abs() > f64::EPSILON {
+                                    new_aabb.0 + (px - ix0) / iw * nw
+                                } else {
+                                    new_aabb.0
+                                };
+                                let sy = if ih.abs() > f64::EPSILON {
+                                    new_aabb.1 + (py - iy0) / ih * nh
+                                } else {
+                                    new_aabb.1
+                                };
+                                (sx, sy)
+                            };
+
+                            // Endpoints are stored in world space (pos is (0,0) for lines).
+                            let new_start = remap(start.0 + pos.0, start.1 + pos.1);
+                            let new_end = remap(end.0 + pos.0, end.1 + pos.1);
+
+                            // Strip the transform back out (lines keep pos at origin).
+                            let new_start = (new_start.0 - pos.0, new_start.1 - pos.1);
+                            let new_end = (new_end.0 - pos.0, new_end.1 - pos.1);
+
+                            match geom {
+                                Geometry::Line { .. } => Geometry::Line {
+                                    start: new_start,
+                                    end: new_end,
+                                },
+                                Geometry::Arrow { .. } => Geometry::Arrow {
+                                    start: new_start,
+                                    end: new_end,
+                                },
+                                _ => unreachable!(),
+                            }
+                        }
+                    };
+                    self.document[idx].geometry = new_geom;
                 }
-                self.document[idx].geometry = match geom {
-                    Geometry::Line { .. } => Geometry::Line {
-                        start: new_start,
-                        end: new_end,
-                    },
-                    Geometry::Arrow { .. } => Geometry::Arrow {
-                        start: new_start,
-                        end: new_end,
-                    },
-                    _ => unreachable!(),
-                };
-            } else {
-                // The initial geometry is stored without the transform offset,
-                // so shift the AABBs into geometry-local space.
-                let (tx, ty) = pos;
-                let local_initial = (
-                    initial_aabb.0 - tx,
-                    initial_aabb.1 - ty,
-                    initial_aabb.2 - tx,
-                    initial_aabb.3 - ty,
-                );
-                let local_new = (
-                    new_aabb.0 - tx,
-                    new_aabb.1 - ty,
-                    new_aabb.2 - tx,
-                    new_aabb.3 - ty,
-                );
-                self.document[idx].geometry = geom.remap_aabb(local_initial, local_new);
+
+                // All other shapes - delegate to remap_aabb
+                _ => {
+                    let (tx, ty) = pos;
+                    let local_initial = (
+                        initial_aabb.0 - tx,
+                        initial_aabb.1 - ty,
+                        initial_aabb.2 - tx,
+                        initial_aabb.3 - ty,
+                    );
+                    let local_new = (
+                        new_aabb.0 - tx,
+                        new_aabb.1 - ty,
+                        new_aabb.2 - tx,
+                        new_aabb.3 - ty,
+                    );
+                    self.document[idx].geometry = geom.remap_aabb(local_initial, local_new);
+                }
             }
         }
     }

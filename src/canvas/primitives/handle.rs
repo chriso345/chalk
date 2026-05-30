@@ -15,6 +15,7 @@ pub enum HandleKind {
 }
 
 impl HandleKind {
+    // PivotStart and PivotEnd Handles are excluded from this list as they are only used for line endpoints.
     pub const ALL: &'static [HandleKind] = &[
         HandleKind::TopLeft,
         HandleKind::Top,
@@ -24,8 +25,6 @@ impl HandleKind {
         HandleKind::BottomLeft,
         HandleKind::Bottom,
         HandleKind::BottomRight,
-        HandleKind::PivotStart,
-        HandleKind::PivotEnd,
     ];
 
     /// Returns the (x, y) center of this handle in world space given the AABB.
