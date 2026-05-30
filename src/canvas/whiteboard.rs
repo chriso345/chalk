@@ -246,7 +246,9 @@ fn load_whiteboard_state() -> WhiteboardState {
     let storage = window.local_storage().unwrap().unwrap();
     let loaded = storage.get_item("chalk_whiteboard").ok().flatten();
     if let Some(saved) = loaded {
-        serde_json::from_str::<WhiteboardState>(&saved).unwrap_or_default()
+        let mut state = serde_json::from_str::<WhiteboardState>(&saved).unwrap_or_default();
+        state.selected.clear();
+        state
     } else {
         WhiteboardState::new()
     }
