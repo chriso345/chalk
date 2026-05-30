@@ -1,6 +1,7 @@
 use crate::canvas::{action::ChalkAction, primitives::Primitive};
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct History {
     /// Linear history of actions
     actions: Vec<ChalkAction>,

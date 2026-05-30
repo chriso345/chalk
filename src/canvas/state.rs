@@ -1,3 +1,4 @@
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
 use crate::{
@@ -18,6 +19,7 @@ use crate::{
 };
 
 /// The entire state of the whiteboard.
+#[derive(Clone, Serialize, Deserialize)]
 pub struct WhiteboardState {
     /// The history of actions and undo/redo state.
     pub history: History,
@@ -49,6 +51,7 @@ pub struct WhiteboardState {
     /// The currently selected tool.
     pub tool: Tool,
 
+    #[serde(skip)]
     pub style: ChalkStyles<'static>,
     pub current_style: PrimitiveStyle,
 
@@ -271,6 +274,7 @@ impl WhiteboardState {
     }
 
     pub fn clear(&mut self) {
+        leptos::logging::log!("Clearing document");
         self.history.clear(&mut self.document);
         self.active = None;
     }

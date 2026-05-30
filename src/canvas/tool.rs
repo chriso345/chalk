@@ -1,8 +1,8 @@
 use crate::canvas::primitives::ShapeKind;
+use serde::{Deserialize, Serialize};
 
 /// The active tool - determines how pointer events are interpreted.
-#[derive(Clone, Copy, Debug, PartialEq)]
-#[derive(Default)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum Tool {
     /// Pans the viewport; no marks are made.
     Pan,
@@ -36,4 +36,3 @@ impl Tool {
         }
     }
 }
-

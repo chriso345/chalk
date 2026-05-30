@@ -1,9 +1,10 @@
 use crate::canvas::types::Point;
+use serde::{Deserialize, Serialize};
 
 /// Per-primitive spatial transform.
 /// Currently only translation is operationally used;
 /// rotation and scale are stored for future use.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Transform {
     /// Translation in world units.
     pub position: Point,
