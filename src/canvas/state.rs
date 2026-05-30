@@ -512,13 +512,21 @@ impl WhiteboardState {
             }
         }
 
-        // Prevent inversion — enforce minimum size.
+        // Allow flipping: do not enforce minx <= maxx or miny <= maxy, just clamp size to minimum if needed.
         let min_size = 1.0;
-        if maxx - minx < min_size {
-            maxx = minx + min_size;
+        if (maxx - minx).abs() < min_size {
+            if maxx > minx {
+                maxx = minx + min_size;
+            } else {
+                maxx = minx - min_size;
+            }
         }
-        if maxy - miny < min_size {
-            maxy = miny + min_size;
+        if (maxy - miny).abs() < min_size {
+            if maxy > miny {
+                maxy = miny + min_size;
+            } else {
+                maxy = miny - min_size;
+            }
         }
 
         let new_aabb = (minx, miny, maxx, maxy);

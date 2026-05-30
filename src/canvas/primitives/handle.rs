@@ -53,7 +53,7 @@ impl HandleKind {
             HandleKind::TopRight => (true, false, true, true),
             HandleKind::Left => (true, true, false, false),
             HandleKind::Right => (true, false, false, false),
-            HandleKind::BottomLeft => (true, true, false, false), // wait, see below
+            HandleKind::BottomLeft => (true, true, true, false),
             HandleKind::Bottom => (false, false, true, false),
             HandleKind::BottomRight => (true, false, true, false),
         }
