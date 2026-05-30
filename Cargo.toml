@@ -27,3 +27,5 @@ web-sys = { version = "0.3.98", features = [
   "Window",
   "Storage",
 ] }
+rand = "0.10.1"
+getrandom = { version = "0.4.2", features = ["wasm_js"] }

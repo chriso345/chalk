@@ -95,6 +95,7 @@ pub fn App() -> impl IntoView {
         <GenerationFlow
             open=generation_palette_open
             on_commit=Callback::new(move |collection: Collection| {
+                leptos::logging::log!("Committing collection: {collection:?}");
                 signals.collection.set(collection);
             })
         />

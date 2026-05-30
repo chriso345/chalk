@@ -33,6 +33,11 @@ pub enum ConfigField {
         default_a: i64,
         default_b: i64,
     },
+    Bool {
+        key: &'static str,
+        label: &'static str,
+        default: bool,
+    },
 }
 
 const BASE_INPUT_STYLE: &str = "flex:1;padding:6px;border-radius:6px;border:1px solid #ccc;\
@@ -327,6 +332,9 @@ pub fn GenerationConfigPanel(
                     init_values.insert(key_a.to_string(), default_a.to_string());
                     init_values.insert(key_b.to_string(), default_b.to_string());
                 }
+                ConfigField::Bool { key, default, .. } => {
+                    init_values.insert(key.to_string(), default.to_string());
+                }
             }
         }
         values.set(init_values);
@@ -402,6 +410,26 @@ pub fn GenerationConfigPanel(
                                     values=values invalid_keys=invalid_keys
                                 />
                             }.into_any(),
+                            ConfigField::Bool { key, label, default } => {
+                                let checked = RwSignal::new(default);
+                                let on_change = move |ev: web_sys::Event| {
+                                    let is_checked = event_target_checked(&ev);
+                                    checked.set(is_checked);
+                                    values.update(|m| {
+                                        m.insert(key.to_string(), is_checked.to_string());
+                                    });
+                                };
+                                view! {
+                                    <div style="display:flex;align-items:center;gap:8px;">
+                                        <input
+                                            type="checkbox"
+                                            prop:checked=checked
+                                            on:change=on_change
+                                        />
+                                        <span>{label}</span>
+                                    </div>
+                                }.into_any()
+                            }
                         }
                     />
                 </div>

@@ -1,5 +1,6 @@
 use crate::canvas::primitives::collections::Collection;
 use crate::canvas::primitives::collections::grid::GridCollection;
+use crate::canvas::primitives::collections::network::NetworkCollection;
 use crate::ui::components::{config_popup::ConfigField, config_popup::GenerationConfigPanel};
 use leptos::prelude::*;
 
@@ -48,12 +49,20 @@ pub struct GenerationPaletteItem {
 
 // Defaults...
 fn generation_palette_items() -> Vec<GenerationPaletteItem> {
-    vec![GenerationPaletteItem {
-        label: "Grid",
-        collection: Collection::Grid {
-            grid: GridCollection::default(),
+    vec![
+        GenerationPaletteItem {
+            label: "Grid",
+            collection: Collection::Grid {
+                grid: GridCollection::default(),
+            },
         },
-    }]
+        GenerationPaletteItem {
+            label: "Network",
+            collection: Collection::Network {
+                network: NetworkCollection::default(),
+            },
+        },
+    ]
 }
 
 #[component]

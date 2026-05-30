@@ -689,6 +689,7 @@ impl WhiteboardState {
         let primitives = collection.generate();
 
         if primitives.is_empty() {
+            leptos::logging::warn!("Collection generated no primitives, skipping stamp");
             return;
         }
 
