@@ -136,6 +136,10 @@ impl Geometry {
             _ => None,
         }
     }
+
+    pub fn is_line(&self) -> bool {
+        matches!(self, Geometry::Line { .. } | Geometry::Arrow { .. })
+    }
 }
 
 /// Expand an AABB (minx, miny, maxx, maxy) to include the given primitive's
