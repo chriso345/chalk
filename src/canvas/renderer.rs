@@ -112,13 +112,25 @@ fn draw_selection_highlight(ctx: &CanvasRenderingContext2d, prims: &[&Primitive]
     ctx.set_stroke_style_str(bb_color);
     ctx.set_line_width(1.5 / zoom);
 
-    for &kind in HandleKind::ALL {
-        let (hx, hy) = kind.position(minx, miny, maxx, maxy);
-        ctx.begin_path();
-        ctx.arc(hx, hy, handle_radius, 0.0, std::f64::consts::TAU)
-            .unwrap();
-        ctx.fill();
-        ctx.stroke();
+    // If exactly one primitive is selected and it is a line or arrow, only draw endpoint handles
+    if prims.len() == 1 {
+        let positions = prims[0].handle_positions();
+        for (hx, hy) in positions {
+            ctx.begin_path();
+            ctx.arc(hx, hy, handle_radius, 0.0, std::f64::consts::TAU)
+                .unwrap();
+            ctx.fill();
+            ctx.stroke();
+        }
+    } else {
+        for &kind in HandleKind::ALL {
+            let (hx, hy) = kind.position(minx, miny, maxx, maxy);
+            ctx.begin_path();
+            ctx.arc(hx, hy, handle_radius, 0.0, std::f64::consts::TAU)
+                .unwrap();
+            ctx.fill();
+            ctx.stroke();
+        }
     }
 
     ctx.restore();

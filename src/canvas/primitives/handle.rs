@@ -10,6 +10,8 @@ pub enum HandleKind {
     BottomLeft,
     Bottom,
     BottomRight,
+    PivotStart,
+    PivotEnd,
 }
 
 impl HandleKind {
@@ -22,6 +24,8 @@ impl HandleKind {
         HandleKind::BottomLeft,
         HandleKind::Bottom,
         HandleKind::BottomRight,
+        HandleKind::PivotStart,
+        HandleKind::PivotEnd,
     ];
 
     /// Returns the (x, y) center of this handle in world space given the AABB.
@@ -42,6 +46,10 @@ impl HandleKind {
             HandleKind::BottomLeft => (minx - n, maxy + n),
             HandleKind::Bottom => (mx, maxy + n),
             HandleKind::BottomRight => (maxx + n, maxy + n),
+
+            // TODO: Fix positioning
+            HandleKind::PivotStart => (minx, miny),
+            HandleKind::PivotEnd => (maxx, maxy),
         }
     }
 
@@ -56,6 +64,8 @@ impl HandleKind {
             HandleKind::BottomLeft => (true, true, true, false),
             HandleKind::Bottom => (false, false, true, false),
             HandleKind::BottomRight => (true, false, true, false),
+            HandleKind::PivotStart => (true, true, true, true),
+            HandleKind::PivotEnd => (true, true, true, true),
         }
     }
 
@@ -65,6 +75,7 @@ impl HandleKind {
             HandleKind::TopRight | HandleKind::BottomLeft => "nesw-resize",
             HandleKind::Top | HandleKind::Bottom => "ns-resize",
             HandleKind::Left | HandleKind::Right => "ew-resize",
+            HandleKind::PivotStart | HandleKind::PivotEnd => "move",
         }
     }
 }

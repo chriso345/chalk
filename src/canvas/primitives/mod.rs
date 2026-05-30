@@ -36,4 +36,27 @@ impl Primitive {
     pub fn is_empty(&self) -> bool {
         self.geometry.is_empty()
     }
+
+    /// Returns the handle positions for this primitive.
+    pub fn handle_positions(&self) -> Vec<(f64, f64)> {
+        match &self.geometry {
+            crate::canvas::primitives::geometry::Geometry::Line { start, end }
+            | crate::canvas::primitives::geometry::Geometry::Arrow { start, end } => {
+                let (tx, ty) = self.transform.position;
+                vec![(start.0 + tx, start.1 + ty), (end.0 + tx, end.1 + ty)]
+            }
+            _ => {
+                // Use bounding box handles for other types
+                let (tx, ty) = self.transform.position;
+                if let Some((minx, miny, maxx, maxy)) = self.geometry.aabb() {
+                    crate::canvas::primitives::handle::HandleKind::ALL
+                        .iter()
+                        .map(|kind| kind.position(minx + tx, miny + ty, maxx + tx, maxy + ty))
+                        .collect()
+                } else {
+                    vec![]
+                }
+            }
+        }
+    }
 }
